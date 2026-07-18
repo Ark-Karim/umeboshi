@@ -1,0 +1,26 @@
+Umeboshi
+Copyright 2026 Umeboshi Contributors
+
+This product includes software developed by the AnKing team
+(https://github.com/AnKingMed/AnKing-Overhaul), licensed under
+the Apache License, Version 2.0.
+
+The Umeboshi-Kaname notetype styling and card templates are derived
+from the AnKing Overhaul project's card styling system. The original
+work can be found at:
+
+  https://github.com/AnKingMed/AnKing-Overhaul
+
+Modifications include:
+- Japanese language support with furigana (ruby) annotations
+- ClaudeFlare cloud sync integration
+- Cloze one-by-one reveal system
+- LLM-powered Q&A chat interface
+- Brain rest countdown overlay
+- Custom font loading (Noto Sans JP, Open Sans, M PLUS 1 Code)
+
+This product also includes:
+- anki-persistence (MIT License) by Simon Lammer
+  https://github.com/SimonLammer/anki-persistence
+- Cloze one-by-one selective display code adapted from the Ankizin project
+  https://ankiweb.net/shared/info/2058530482

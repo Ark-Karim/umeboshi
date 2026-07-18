@@ -1,0 +1,1329 @@
+<!-- version 98e44e1 -->
+<!-- フォントの事前接続で読み込み高速化 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@100..700&family=Noto+Sans+JP:wght@100..900&family=Open+Sans:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+
+
+<style>
+  /* デフォルト: Open Sans優先（英語・コード向け） */
+  * {
+    font-family: 'Open Sans', 'Noto Sans JP', sans-serif;
+  }
+
+  /* コード領域: Open Sans + monospace */
+  code,
+  pre,
+  .code,
+  [class*="lang-"] {
+    font-family: "M PLUS 1 Code", monospace;
+  }
+</style>
+
+<style>
+  /* ~~~~~~~~~BUTTON LAYOUT (Panel-based Accordion)~~~~~~~~~ */
+  .button-general {
+    outline: 0;
+    border-radius: 0.8rem;
+    border: 1px solid transparent;
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    align-items: center;
+    font-weight: 600;
+    color: #ccc !important;
+    transition: color 0.3s ease;
+
+    background: #333;
+    margin: .3rem;
+    width: auto;
+    font-weight: 600;
+
+  }
+
+  .button-general:hover {
+    background: #222;
+    border-color: #444;
+  }
+
+  .button-general img {
+    height: 0.571rem;
+    filter: brightness(0.9);
+  }
+
+
+
+
+  .expanded-button {
+    color: #fff !important;
+    background: #616161 !important;
+  }
+
+
+  #button-mq:not(.expanded-button) {
+    color: #ef4444 !important;
+  }
+
+
+  .tagBasedHintBtn {
+    display: none;
+  }
+
+  .horizontal-btn {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  /* oneByOne btn のスタイル上書き */
+  .button-one-by-one {
+    display: inline;
+  }
+</style>
+
+
+<style>
+  /* ~~~~~~~~~ PARAGRAPHS ~~~~~~~~~ */
+  p {
+    margin-top: 0.4em;
+    margin-bottom: 0.4em;
+  }
+
+  /* ~~~~~~~~~ BILINGUAL ~~~~~~~~~ */
+
+
+
+
+  ruby {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: baseline;
+    vertical-align: 0em;
+    line-height: 1.5;
+    margin: 0px;
+    padding-left: 3px;
+    padding-right: 3px;
+    font-size: 1em;
+    ruby-align: center;
+    font-family: 'Open Sans', 'Noto Sans JP', sans-serif;
+  }
+
+  rt {
+    font-size: 0.5em;
+    color: gray;
+    letter-spacing: 0.12em;
+    font-weight: normal;
+    margin-top: -0.1em;
+  }
+
+
+
+  /* ~~~~~~~~~ HEADINGS ~~~~~~~~~ */
+  h1 {
+    padding: 0;
+    font-size: 1.1rem;
+    color: #222;
+  }
+
+  h2 {
+    margin-top: 1rem;
+    margin-bottom: 0.2rem;
+    padding-left: 0.4rem;
+    border-left: solid 0.2rem #aaa;
+    font-size: 1.1rem;
+    color: #222;
+  }
+
+  h3 {
+    margin-top: 1rem;
+    margin-bottom: .2rem;
+    padding-left: 0.4rem;
+    border-left: solid 0.2rem #aaa;
+    font-size: .9rem;
+    color: #111;
+  }
+
+  /* ~~~~~~~~~ HORIZONTAL RULE ~~~~~~~~~ */
+  hr {
+    opacity: .7
+  }
+
+  /* ~~~~~~~~~ TIMER ~~~~~~~~~ */
+  .timer {
+    font-size: 0.714rem;
+    margin: 12em auto auto auto;
+  }
+
+  /* ~~~~~~~~~ FIELDS ~~~~~~~~~ */
+  .cloze {
+    background: linear-gradient(transparent 40%, #ccf 40%, #ccf 80%, transparent 80%);
+    font-weight: bold;
+    font-size: 1em;
+    padding-left: 0.179rem;
+    padding-right: 0.179rem;
+  }
+
+  .hints+#extra {
+    margin-top: 1rem;
+  }
+
+  #extra {
+    font-style: normal;
+    font-size: var(--extra-font-size);
+  }
+
+  /* ~~~~~~~~~ TABLE STYLES ~~~~~~~~~ */
+
+
+  table {
+    margin-bottom: 15px;
+    margin-left: 5px;
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  tr:nth-child(2n) {
+    background: #efe;
+  }
+
+  th {
+    padding: 10px;
+    border-bottom: solid 0.5px #777;
+    background: #eee;
+  }
+
+  td {
+    padding: 10px;
+    min-width: 80px;
+  }
+
+
+
+
+  /* ~~~~~~~~~ IMAGE DETAILS ~~~~~~~~~ */
+  .mobile .card img {
+    max-width: 100% !important;
+  }
+
+  #extra img {
+    min-width: 0%;
+  }
+
+  .mobile .hints,
+  .mobile #extra img {
+    max-width: 100% !important;
+  }
+
+  .image40 img {
+    width: 40% !important;
+  }
+
+  .image50 img {
+    width: 50% !important;
+  }
+
+  .image60 img {
+    width: 60% !important;
+  }
+
+  .image70 img {
+    width: 70% !important;
+  }
+
+  .image80 img {
+    width: 80% !important;
+  }
+
+  .image90 img {
+    width: 90% !important;
+  }
+
+  .image40 img,
+  .image50 img,
+  .image60 img,
+  .image70 img,
+  .image80 img,
+  .image90 img {
+    display: block;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .mobile .image40 img,
+  .mobile .image50 img,
+  .mobile .image60 img,
+  .mobile .image70 img,
+  .mobile .image80 img,
+  .mobile .image90 img {
+    width: auto !important;
+  }
+
+  /*Image hover zoom*/
+  #extra img:active,
+  #notes img:active,
+  #missed img:active,
+  #pathoma img:active,
+  #bnb img:active {
+    transform: scale(1.2);
+  }
+
+  #firstaid img:active,
+  #sketchy img:active,
+  #sketchy2 img:active,
+  #sketchyextra img:active,
+  #picmonic img:active,
+  #pixorize img:active,
+  #physeo img:active,
+  #additional img:active {
+    transform: scale(1.5);
+  }
+
+  .mobile img:active {
+    transform: scale(1.0) !important;
+  }
+
+
+
+
+  /* ~~~~~~~~~ LISTS ~~~~~~~~~ */
+  ul,
+  ol {
+    padding-left: 1.7rem;
+    text-align: left;
+  }
+
+  ul ul,
+  table ul,
+  ol ol,
+  table ol {
+    padding-left: 0.714rem;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    display: block;
+  }
+
+
+
+  code,
+  pre,
+  .code,
+  [class*="lang-"] {
+    font-size: 0.9rem;
+    margin-left: 0.4rem;
+    padding: 0.4rem;
+    padding-left: 0.5rem;
+    background-color: #eee;
+    border-radius: 8px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+
+
+  pre {
+    margin: 0.5rem;
+  }
+
+
+  /* ~~~~~~~~~ FONT SIZE CSS VARIABLES (applied) ~~~~~~~~~ */
+  :root {
+    --text-font-size: 1rem;
+    --extra-font-size: 1rem;
+    --button-font-size: 1rem;
+    --hint-font-size: 1rem;
+    --llm-section-font-size: 1rem;
+    --llm-qa-font-size: 1rem;
+  }
+
+  #text {
+    font-size: var(--text-font-size);
+  }
+
+  .button-general {
+    font-size: var(--button-font-size) !important;
+  }
+
+  .hints .content-container {
+    font-size: var(--hint-font-size);
+  }
+
+  #umeboshi-llm-section {
+    font-size: var(--llm-section-font-size);
+  }
+
+  #umeboshi-qa-section {
+    font-size: var(--llm-qa-font-size);
+  }
+
+  /* ~~~~~~~~~ TIMING DOT (clozeOneByOne) ~~~~~~~~~ */
+  #umeboshi-timing-dot {
+    position: fixed;
+    top: 0.357rem;
+    right: 0.357rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    display: none;
+    z-index: 9999;
+    --timing-easy-color: #0099ff;
+    --timing-medium-color: #3cff00;
+    --timing-hard-color: #ffa200;
+    background-color: var(--timing-easy-color);
+  }
+
+  #umeboshi-timing-dot.timing-easy {
+    background-color: var(--timing-easy-color);
+  }
+
+  #umeboshi-timing-dot.timing-medium {
+    background-color: var(--timing-medium-color);
+  }
+
+  #umeboshi-timing-dot.timing-hard {
+    background-color: var(--timing-hard-color);
+  }
+</style>
+
+<style>
+  /* Toggle Switch (Settings Modal) */
+  .umeboshi-switch {
+    position: relative;
+    display: inline-block;
+    width: 1.429rem;
+    height: 0.714rem;
+  }
+
+  .umeboshi-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .umeboshi-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: 0.3s;
+    border-radius: 0.714rem;
+  }
+
+  .umeboshi-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 0.571rem;
+    width: 0.571rem;
+    left: 0.071rem;
+    bottom: 0.071rem;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  .umeboshi-switch input:checked+.umeboshi-switch-slider {
+    background-color: #4fa91d;
+  }
+
+  .umeboshi-switch input:checked+.umeboshi-switch-slider:before {
+    transform: translateX(0.714rem);
+  }
+
+  /* Toggle Labels (LLM Chat) */
+  #umeboshi-context-toggle-label,
+  #umeboshi-thinking-toggle-label {
+    font-size: 0.7rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    margin-left: 0.5rem;
+  }
+
+</style>
+
+<script>
+  // ############## USER CONFIGURATION START ##############
+  // === 自動フリップ設定 ===
+  var autoflip = true // UmeboshiStorage読み込み後に上書き
+
+
+  // ##############  カラフルタグ設定  ##############
+
+// === タグ表示ショートカット ===
+var toggleTagsShortcut = "C";
+
+// === ハイライト対象のタグ ===
+// このタグが含まれる場合、赤背景で強調表示
+var tagID = "XXXYYYZZZ"
+
+// === タグ表示レベル ===
+// 0: タグ全体を表示、1以上: 最後のN階層のみ表示
+// 例: "A::B::C" で numTagLevelsToShow=1 → "C"のみ表示
+var numTagLevelsToShow = 0;
+  
+// ##############  CLOZE ONE BY ONE 設定  ##############
+
+// === ショートカットキー設定 ===
+var revealNextShortcut = "N"           // 次のcloze表示
+var revealNextWordShortcut = "Shift + N"  // 次の単語表示
+var toggleAllShortcut = ","            // 全cloze表示トグル
+
+// === 表示モード設定 ===
+// "cloze": cloze単位で表示、"word": 単語単位で表示
+var revealNextClozeMode = "cloze"
+
+// === cloze非表示時のテキスト ===
+var clozeHider = (elem) => "　🌺　"
+/*
+以下のようにカスタマイズ可能:
+// 固定長:
+var clozeHider = (elem) => "███"
+// 文字数に応じたブロック:
+var clozeHider = (elem) => "█".repeat(elem.textContent.length)
+// 空白を表示:
+var clozeHider = (elem) => "[" + elem.textContent.split(" ").map((t) => "█".repeat(t.length)).join(" ") + "]"
+// 色付きボックス（画像は非表示にならない）:
+var clozeHider = (elem) => `<span style="background-color: red; color: transparent;">${elem.innerHTML}</span>`
+*/
+
+// === 選択的ワンバイワン設定 ===
+// 有効にすると、one-by-oneフィールドで指定した番号のclozeのみ表示
+// 例: "1,3" → c1とc3のみワンバイワン
+var selectiveOneByOne = true;
+// 選択的モード無効時: ワンバイワンを有効にする最低cloze数
+// 0またはfalsy値でこの設定を無効化
+var minNumberOfClozes = 0;
+
+
+  // ############## USER CONFIGURATION END ##############
+</script>
+
+<script>
+// ##############  UMEBOSHI LOCAL STORAGE (v2 - ClaudeFlare)  ##############
+// Umeboshi KanameノートタイプのlocalStorage管理モジュール
+
+var UmeboshiStorage = (function() {
+  var STORAGE_KEY = 'umeboshi';     // localStorageのキー名
+  var SCHEMA_VERSION = 2;           // 現在のスキーマバージョン
+
+  // === デフォルトのlocalStorage構造（v2） ===
+  function getDefaults() {
+    return {
+      version: SCHEMA_VERSION,
+      claudeflareToken: '',          // ClaudeFlare API認証トークン
+      claudeflareUrl: 'https://umeboshi-claudeflare.YOUR_CLOUDFLARE_SUBDOMAIN.workers.dev',
+      ui: {
+        fontSize: 28,                // フォントサイズ（px）
+        countdownEnabled: true,      // 脳休憩カウントダウン表示
+        llmEnabled: true,            // LLM機能
+        thinkingEnabled: false,      // Thinking表示
+        autoFlip: true,              // 自動めくり（表面スキップ）
+        ttsEnabled: false,           // TTS読み上げ
+        countdownBrainRestSec: 3,    // 脳休憩カウントダウン秒数
+        easySecond: 5,               // タイミングドット: 青〇の秒数閾値
+        hardSecond: 10,              // タイミングドット: オレンジ〇の秒数閾値
+        rubyLang: 'en',              // ルビ表示言語: 'en'=英語デフォルト, 'ja'=日本語デフォルト
+        rubyDelaySec: 0,             // ルビ遅延表示の秒数（0 = 即時表示）
+      },
+      hints: {
+        autoRevealHints: {},         // ヒント自動表示設定
+      },
+      syncedAt: ''                   // 最終同期日時
+    };
+  }
+
+  // === ディープマージユーティリティ ===
+  // ネストされたオブジェクトをマージ（スキーマは固定深度のため非再帰）
+  function deepMerge(target, source) {
+    var result = JSON.parse(JSON.stringify(target));
+    for (var key in source) {
+      if (source.hasOwnProperty(key)) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+            && result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+          Object.assign(result[key], source[key]);
+        } else {
+          result[key] = source[key];
+        }
+      }
+    }
+    return result;
+  }
+
+  // === v1 → v2マイグレーション ===
+  function migrateV1toV2(data) {
+    if (!data) return getDefaults();
+
+    // v1検出: githubTokenまたはllm.providerが存在
+    var isV1 = data.githubToken || (data.llm && data.llm.provider);
+    if (!isV1) return data;
+
+    // v2構造に変換（ui/hintsは既存値をマージ）
+    var migrated = {
+      version: 2,
+      claudeflareToken: '',
+      claudeflareUrl: 'https://umeboshi-claudeflare.YOUR_CLOUDFLARE_SUBDOMAIN.workers.dev',
+      ui: deepMerge(getDefaults().ui, data.ui || {}),
+      hints: deepMerge(getDefaults().hints, data.hints || {}),
+      syncedAt: ''
+    };
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      console.log('UmeboshiStorage: Migrated v1 → v2 (ClaudeFlare)');
+    } catch (e) {
+      console.error('UmeboshiStorage: Migration failed', e);
+    }
+
+    return migrated;
+  }
+
+  // === localStorageから読み込み（デフォルト値とマージ） ===
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+
+      // v1データの自動マイグレーション
+      if (parsed.version === 1 || parsed.githubToken || (parsed.llm && parsed.llm.provider)) {
+        parsed = migrateV1toV2(parsed);
+      }
+
+      return deepMerge(getDefaults(), parsed);
+    } catch (e) {
+      console.error('UmeboshiStorage: Failed to load', e);
+      return null;
+    }
+  }
+
+  // === localStorageに保存 ===
+  function save(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.error('UmeboshiStorage: Failed to save', e);
+      return false;
+    }
+  }
+
+  // === ドットパスでネストされた値を取得（例: 'ui.fontSize'） ===
+  function get(path) {
+    var data = load();
+    if (!data) return undefined;
+    var parts = path.split('.');
+    var current = data;
+    for (var i = 0; i < parts.length; i++) {
+      if (current === undefined || current === null) return undefined;
+      current = current[parts[i]];
+    }
+    return current;
+  }
+
+  // === ドットパスでネストされた値を設定 ===
+  function set(path, value) {
+    var data = load() || getDefaults();
+    var parts = path.split('.');
+    var current = data;
+    for (var i = 0; i < parts.length - 1; i++) {
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = value;
+    return save(data);
+  }
+
+  // === 初期化（データがなければデフォルトで作成） ===
+  function init() {
+    var existing = load();
+    if (!existing) {
+      return save(getDefaults());
+    }
+    return true;
+  }
+
+  // === 初期化済みチェック ===
+  function isInitialized() {
+    return load() !== null;
+  }
+
+  // === ClaudeFlareトークン設定済みチェック ===
+  function hasToken() {
+    var data = load();
+    return data && data.claudeflareToken && data.claudeflareToken.length > 0;
+  }
+
+  // === 公開API ===
+  return {
+    load: load,
+    save: save,
+    get: get,
+    set: set,
+    init: init,
+    isInitialized: isInitialized,
+    hasToken: hasToken,
+    getDefaults: getDefaults,
+    STORAGE_KEY: STORAGE_KEY
+  };
+})();
+</script>
+
+
+<script>
+  // autoFlip設定をlocalStorageから読み込み
+  try {
+    var _savedAutoFlip = UmeboshiStorage.get('ui.autoFlip');
+    if (_savedAutoFlip !== undefined) autoflip = _savedAutoFlip;
+  } catch (e) {}
+</script>
+
+<!-- カード内容コンテナ -->
+<div class="content-container">
+  <div id="front">
+    <!-- clozeフィールド（穴埋め部分） -->
+    <div id="text">{{cloze:text}}</div>
+    <!-- 生テキスト（LLMコンテキスト用、画面非表示） -->
+    <div id="raw-text" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;">{{text}}</div>
+  </div>
+</div>
+
+
+<!-- === コアコンポーネント === -->
+
+<!-- // フロント↔バック データ受け渡し -->
+<!-- Anki Persistence (MIT): Front↔Back間データ保持 (sessionStorage only) -->
+<!-- https://github.com/SimonLammer/anki-persistence -->
+
+<script>
+if (typeof(window.Persistence) === 'undefined') {
+  var _persistenceKey = 'github.com/SimonLammer/anki-persistence/';
+  var _defaultKey = '_default';
+
+  window.Persistence = {
+    clear: function() {
+      for (var i = 0; i < sessionStorage.length; i++) {
+        var k = sessionStorage.key(i);
+        if (k.indexOf(_persistenceKey) == 0) {
+          sessionStorage.removeItem(k);
+          i--;
+        }
+      }
+    },
+    setItem: function(key, value) {
+      if (value == undefined) {
+        value = key;
+        key = _defaultKey;
+      }
+      sessionStorage.setItem(_persistenceKey + key, JSON.stringify(value));
+    },
+    getItem: function(key) {
+      if (key == undefined) {
+        key = _defaultKey;
+      }
+      return JSON.parse(sessionStorage.getItem(_persistenceKey + key));
+    },
+    removeItem: function(key) {
+      if (key == undefined) {
+        key = _defaultKey;
+      }
+      sessionStorage.removeItem(_persistenceKey + key);
+    },
+    getAllKeys: function() {
+      var keys = [];
+      var prefixedKeys = Object.keys(sessionStorage);
+      for (var i = 0; i < prefixedKeys.length; i++) {
+        var k = prefixedKeys[i];
+        if (k.indexOf(_persistenceKey) == 0) {
+          keys.push(k.substring(_persistenceKey.length, k.length));
+        }
+      }
+      return keys.sort();
+    },
+    isAvailable: function() {
+      try { return typeof(window.sessionStorage) === 'object'; } catch(e) { return false; }
+    }
+  };
+}
+</script>
+
+
+
+<!-- Credit: Code for selective 1b1 clozes is adapted from the Ankizin project: https://ankiweb.net/shared/info/2058530482 -->
+
+<!-- CLOZE ONE BY ONE FRONT -->
+<div id="one-by-one" style="display: none;">{{oneByOne}}</div>
+
+<script>
+  // enables cloze one-by-one even when one-by-one field is empty
+  // minNumberOfClozes is still considered in this case
+  // overridden in importance by selectiveOneByOne and minNumberOfClozes
+  var alwaysOneByOne = false;
+  var clozeOneByOneEnabled = true;
+  var oneByOneFieldNotEmpty = document.getElementById("one-by-one").textContent !== "";
+    clozeOneByOneEnabled = alwaysOneByOne || oneByOneFieldNotEmpty;
+  
+  var clozeHints = [];
+  if (clozeOneByOneEnabled) {
+    document.getElementById("qa").classList.add('one-by-one');
+    // Save cloze hints to display in the back
+    let clozes = document.getElementsByClassName("cloze")
+    for(var i = 0; i < clozes.length; i++) {
+      clozes[i].classList.add("one-by-one");
+      if (clozes[i].innerHTML === "[...]") {
+        clozeHints.push("")
+      } else {
+        clozeHints.push(clozes[i].innerHTML)
+      }
+    }
+
+    // --- CHECK IF ONE BY ONE SHOULD BE ENABLED FOR THIS SPECIFIC CARD ---
+    /**
+     * Credit for the getCardNumber function goes to foenixx (GitHub) / ollevolle (AnkiWeb Forum)
+     */
+     const getCardNumber = function () {
+      clz = document.body.className;
+      const regex = /card(\d+)/gm;
+      let m;
+
+      if ((m = regex.exec(clz)) !== null) {
+        return m[1];
+      } else {
+        // Should only fire if card is not cloze
+        console.error("Cannot find cardN class of body element!");
+        return "0";
+      }
+    }
+
+    function processSelective1b1() {
+      // parse the cloze numbers for which selectiveOneByOne is enabled
+      var clozeNumbers = document.getElementById("one-by-one").textContent.split(',').filter(element => element).map(Number)
+      var cardNumberIsOneByOne = !clozeNumbers.filter(n => !Number.isNaN(n)).length || clozeNumbers.includes(parseInt(getCardNumber()))
+
+      // check the amount of clozes -> disable OneByOne if less than minimum value wanted (minNumberOfClozes)
+      var numClozes = (minNumberOfClozes) ? document.querySelectorAll('.cloze').length : 0
+
+      // stop OneByOne if selectiveOneByOne is not enabled for this specific card OR if OneByOne is disabled some other way
+      // -> show normal backside
+      if (selectiveOneByOne && !cardNumberIsOneByOne || numClozes < minNumberOfClozes) {
+        clozeOneByOneEnabled = false
+      }
+
+      // autoflip + clozeOneByOne 有効時、表面をスキップして裏面へ
+if (autoflip && clozeOneByOneEnabled) {
+    // チラつき防止: 表面を非表示にし、裏面で解除
+    if(window.pycmd || window.showAnswer) {
+        document.getElementById("qa").style.display = "none";
+    }
+
+    // Ankiデスクトップ or AnkiDroidで自動めくり
+    if (window.pycmd) {
+        pycmd("ans")
+    } else if (window.showAnswer) {
+        showAnswer()
+    }
+}
+// AnkiMobileにはshowAnswer APIがないため、タップ/スワイプで対応
+    }
+
+    function delayedProcessSelective1b1() {
+      if (window.requestAnimationFrame) window.requestAnimationFrame(processSelective1b1); // less flickering
+      else window.setTimeout(processSelective1b1, 0);
+    };
+    if (globalThis.onUpdateHook) {
+      onUpdateHook.push(delayedProcessSelective1b1);
+    }
+    else if (document.readyState === "complete") {
+        delayedProcessSelective1b1();
+    }
+    else {
+      document.addEventListener("DOMContentLoaded", delayedProcessSelective1b1);
+    }
+  }
+  Persistence.setItem("clozeHints", clozeHints);
+</script>
+
+<!-- カード切り替え対応イベントリスナー -->
+<script>
+  // 前回のカードで登録したリスナーを全て解除
+  if (window.ankingEventListeners) {
+    for (const listener of ankingEventListeners) {
+      const type = listener[0]
+      const handler = listener[1]
+      document.removeEventListener(type, handler)
+    }
+  }
+  // リスナー管理配列を初期化
+  window.ankingEventListeners = []
+
+  /**
+   * イベントリスナーを登録し、管理配列に追加
+   * 次回カード切り替え時に自動解除される
+   */
+  window.ankingAddEventListener = function(type, handler) {
+    document.addEventListener(type, handler)
+    window.ankingEventListeners.push([type, handler])
+  }
+</script>
+
+<!-- ショートカットキーマッチング関数 -->
+<script>
+  // 特殊文字→keyCode変換テーブル
+  var specialCharCodes = {
+    "-": "minus",
+    "=": "equal",
+    "[": "bracketleft",
+    "]": "bracketright",
+    ";": "semicolon",
+    "'": "quote",
+    "`": "backquote",
+    "\\": "backslash",
+    ",": "comma",
+    ".": "period",
+    "/": "slash",
+  };
+
+  /**
+   * ショートカット文字列 (例: "Ctrl+Shift+N") を受け取り、
+   * キーボードイベントがマッチするか判定する関数を返す
+   */
+  function shortcutMatcher(shortcut) {
+    if (!shortcut) return function() { return false; };
+    // "Ctrl+Shift+N" → ["ctrl", "shift", "n"]
+    let shortcutKeys = shortcut.toLowerCase().split(/[+]/).map(key => key.trim())
+    let mainKey = shortcutKeys[shortcutKeys.length - 1]
+    const mainKeyVariants = [];
+
+    // 主キーのcode変換
+    if (mainKey.length === 1) {
+      if (/\d/.test(mainKey)) {
+        // 数字キー: digit系とnumpad系の両方をマッチ
+        mainKeyVariants.push("digit" + mainKey)
+        mainKeyVariants.push("numpad" + mainKey)
+      } else if (/[a-zA-Z]/.test(mainKey)) {
+        // アルファベット: key系
+        mainKeyVariants.push("key" + mainKey)
+      } else {
+        // 特殊文字: テーブルで変換
+        let code = specialCharCodes[mainKey];
+        if (code) {
+          mainKey = code
+          mainKeyVariants.push(code)
+        } else {
+          mainKeyVariants.push(mainKey)
+        }
+      }
+    } else {
+      // 複数文字 (例: "Escape", "Enter")
+      mainKeyVariants.push(mainKey)
+    }
+
+    // 修飾キーの状態を取得
+    let ctrl = shortcutKeys.includes("ctrl")
+    let shift = shortcutKeys.includes("shift")
+    let alt = shortcutKeys.includes("alt")
+
+    // イベントマッチ関数を生成して返す
+    let matchShortcut = function (ctrl, shift, alt, mainKeyVariants, event) {
+      if (!mainKeyVariants.includes(event.code.toLowerCase())) return false
+      if (ctrl !== (event.ctrlKey || event.metaKey)) return false
+      if (shift !== event.shiftKey) return false
+      if (alt !== event.altKey) return false
+      return true
+    }.bind(window, ctrl, shift, alt, mainKeyVariants)
+
+    return matchShortcut
+  }
+</script>
+
+<!-- IMAGE BLUR -->
+<!-- .blur クラス付き画像をクリックでぼかし解除/再適用 -->
+<script>
+    // 全ぼかし画像にクリックイベントを設定
+    for (const image of document.querySelectorAll(".blur")) {
+        image.classList.add("tappable");
+        image.addEventListener("click", () => {
+            image.classList.toggle("blur");
+        });
+    }
+</script>
+
+
+
+<!-- BEGIN WRAPPER CODE shuffle — 順序シャッフル機能 -->
+
+<script>
+    (() => {
+        // === セレクタの設定 ===
+        const selectors = [".shuffle"];
+        // 保存済みのシャッフルマップを読み込み
+        const shuffleMap = Persistence.getItem("shuffle") || {};
+        const containerSelector = selectors.join(", ");
+
+        // === フロント/バック判定 ===
+        function isFront() {
+            const hasHrMarker = document.querySelector("hr[id=answer]");
+            const hasClozeFieldClass = document.querySelector(".clozefield");
+            return !hasHrMarker && !hasClozeFieldClass;
+        }
+
+        // === Fisher-Yatesシャッフル（indexMapで順序を固定） ===
+        function shuffle(array, indexMap) {
+            let currentIndex = array.length;
+            while (currentIndex != 0) {
+                currentIndex--;
+                // 既存のマップがあれば同じ順序、なければ新規ランダム
+                let randomIndex = indexMap[currentIndex] !== undefined ? indexMap[currentIndex] : Math.floor(Math.random() * (currentIndex + 1));
+                indexMap[currentIndex] = randomIndex;
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex],
+                    array[currentIndex],
+                ];
+            }
+        }
+
+        // === 親要素の中で最も近いID付き要素を取得 ===
+        function getNearestIdElement(element) {
+            let current = element;
+            while (current && current !== document.body) {
+                if (current.id) {
+                    return current;
+                }
+                current = current.parentElement;
+            }
+            return null;
+        }
+
+        // === スコープ内でのインデックスを取得 ===
+        function getScopedIndex(element, selector) {
+            const scope = getNearestIdElement(element);
+            const candidates = scope
+                ? Array.from(scope.querySelectorAll(selector))
+                : Array.from(document.querySelectorAll(selector));
+            const index = candidates.indexOf(element);
+            return index === -1 ? 0 : index;
+        }
+
+        // === シャッフルマップのキーを生成 ===
+        function shuffleKey(element, groupType, selector) {
+            const scope = getNearestIdElement(element);
+            const scopeKey = scope ? `${scope.tagName.toLowerCase()}#${scope.id}` : "document";
+            const index = selector ? getScopedIndex(element, selector) : 0;
+            return `${scopeKey}:${groupType}:${index}`;
+        }
+
+        // === 要素配列をシャッフルしてDOMに入れ替え ===
+        function shuffleElements(elements, mapKey) {
+            // no-shuffleクラス配下の要素は除外
+            elements = elements.filter(e => !e.matches(".no-shuffle *"));
+            if (elements.length === 0) {
+                return;
+            }
+            const shuffledElements = Array.from(elements);
+            const indexMap = shuffleMap[mapKey] || {};
+            // プレースホルダーに置き換え
+            elements = elements.map(el => {
+                const placeholder = document.createTextNode('');
+                el.replaceWith(placeholder);
+                return placeholder;
+            });
+            shuffle(shuffledElements, indexMap);
+            shuffleMap[mapKey] = indexMap;
+            // シャッフル後の要素を配置
+            for (let i = 0; i < elements.length; i++) {
+                elements[i].replaceWith(shuffledElements[i]);
+            }
+        }
+
+        // === リスト要素をシャッフル ===
+        function shuffleList(listElement) {
+            const items = Array.from(listElement.querySelectorAll("li"));
+            shuffleElements(items, shuffleKey(listElement, "list", "ol, ul"));
+        }
+
+        // === セレクタに一致するコンテナをシャッフル処理 ===
+        for (const selector of selectors) {
+            for (const container of document.querySelectorAll(selector)) {
+                // リスト要素をシャッフル
+                if (["UL", "OL"].includes(container.tagName)) {
+                    shuffleList(container);
+                }
+                // ネストされたリストもシャッフル
+                for (const parentElement of container.querySelectorAll(
+                    "ol, ul"
+                )) {
+                    shuffleList(parentElement);
+                }
+                // 画像をシャッフル
+                const images = Array.from(container.querySelectorAll("img"));
+                shuffleElements(images, shuffleKey(container, "images", containerSelector));
+            }
+        }
+
+        // === フロント: シャッフル順序を保存、バック: クリーンアップ ===
+        if (isFront()) {
+            Persistence.setItem("shuffle", shuffleMap);
+        } else {
+            Persistence.removeItem("shuffle");
+        }
+    })();
+</script>
+
+<!-- END WRAPPER CODE -->
+
+
+
+
+<!-- // ClaudeFlareクラウド同期 -->
+<script>
+// ##############  UMEBOSHI SYNC (ClaudeFlare)  ##############
+// ClaudeFlare API経由のクラウド同期モジュール（GitHub同期の後継）
+
+var UmeboshiSync = (function() {
+
+  // === API fetchヘルパー（認証付き） ===
+  async function apiFetch(endpoint, options) {
+    var baseUrl = UmeboshiStorage.get('claudeflareUrl');
+    var token = UmeboshiStorage.get('claudeflareToken');
+
+    // 設定未完了の場合はエラー
+    if (!baseUrl || !token) {
+      throw new Error('ClaudeFlare not configured. Open settings to set up.');
+    }
+
+    // URL末尾のスラッシュを除去してエンドポイントを結合
+    var url = baseUrl.replace(/\/+$/, '') + endpoint;
+    var opts = Object.assign({}, options || {});
+    // 認証ヘッダーを設定
+    opts.headers = Object.assign({
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    }, opts.headers || {});
+
+    var res = await fetch(url, opts);
+    var text = await res.text();
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      throw new Error('サーバーエラー: 応答がJSONではありません。 ' + text.substring(0, 100));
+    }
+
+    // APIエラーチェック
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || ('API error: ' + res.status));
+    }
+
+    return data.data;
+  }
+
+  // === クラウドから設定をプル ===
+  async function pullFromCloud() {
+    var remoteSettings = await apiFetch('/api/sync/pull', { method: 'POST' });
+
+    if (!remoteSettings) {
+      throw new Error('No settings found on server.');
+    }
+
+    var local = UmeboshiStorage.load();
+    var localSyncedAt = local.syncedAt || '';
+    var remoteUpdatedAt = remoteSettings.updatedAt || '';
+
+    // 競合チェック: ローカルとリモートの更新日時が異なる場合
+    if (localSyncedAt && remoteUpdatedAt && localSyncedAt !== remoteUpdatedAt) {
+      var choice = await showConflictDialog(local, remoteSettings);
+      if (choice === 'local') {
+        // ローカルをクラウドにプッシュ
+        await pushToCloud();
+        showSyncStatus('Local settings pushed to cloud ✓', 'success');
+        return local;
+      }
+      // 'cloud'の場合はリモート設定を使用
+    }
+
+    // リモート設定を適用（トークンとURLはローカル値を保持）
+    remoteSettings.claudeflareToken = local.claudeflareToken;
+    remoteSettings.claudeflareUrl = local.claudeflareUrl;
+    remoteSettings.syncedAt = new Date().toISOString();
+    UmeboshiStorage.save(remoteSettings);
+
+    showSyncStatus('Settings pulled from cloud ✓', 'success');
+    return remoteSettings;
+  }
+
+  // === 設定をクラウドにプッシュ ===
+  async function pushToCloud() {
+    var data = UmeboshiStorage.load();
+
+    // トークンとURLはサーバーに送信しない（セキュリティ対策）
+    var toPush = JSON.parse(JSON.stringify(data));
+    delete toPush.claudeflareToken;
+    delete toPush.claudeflareUrl;
+
+    await apiFetch('/api/sync/push', {
+      method: 'POST',
+      body: JSON.stringify(toPush)
+    });
+
+    // 同期日時を更新
+    UmeboshiStorage.set('syncedAt', new Date().toISOString());
+    showSyncStatus('Settings pushed to cloud ✓', 'success');
+  }
+
+  // === 競合ダイアログを表示（'cloud'または'local'を返すPromise） ===
+  function showConflictDialog(localSettings, remoteSettings) {
+    return new Promise(function(resolve) {
+      // オーレーレイを作成
+      var overlay = document.createElement('div');
+      overlay.id = 'umeboshi-sync-conflict';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10001;display:flex;align-items:center;justify-content:center;';
+
+      // ダイアログボックス
+      var box = document.createElement('div');
+      box.style.cssText = 'background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:24px;max-width:400px;width:90%;color:#e5e5e5;text-align:center;';
+
+      box.innerHTML =
+        '<h3 style="margin:0 0 12px 0;font-size:16px;">⚠️ Settings Conflict Detected</h3>' +
+        '<p style="margin:0 0 20px 0;font-size:14px;color:#a0a0a0;">Conflicting settings found between cloud and local.<br>Which settings would you like to KEEP?</p>' +
+        '<div style="display:flex;gap:12px;justify-content:center;">' +
+        '<button id="sync-keep-cloud" style="padding:10px 24px;border:1px solid #555;border-radius:8px;background:#2a2a2a;color:#e5e5e5;cursor:pointer;font-size:14px;">Cloud ☁️</button>' +
+        '<button id="sync-keep-local" style="padding:10px 24px;border:1px solid #555;border-radius:8px;background:#2a2a2a;color:#e5e5e5;cursor:pointer;font-size:14px;">Local 📱</button>' +
+        '</div>';
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      // ダイアログを閉じる関数
+      var cleanup = function() {
+        overlay.remove();
+      };
+
+      // ボタンクリックで選択を返す
+      document.getElementById('sync-keep-cloud').onclick = function() {
+        cleanup();
+        resolve('cloud');
+      };
+
+      document.getElementById('sync-keep-local').onclick = function() {
+        cleanup();
+        resolve('local');
+      };
+    });
+  }
+
+  // === 同期ステータスメッセージを表示 ===
+  function showSyncStatus(message, type) {
+    // 既存のステータス表示を除去
+    var existing = document.getElementById('umeboshi-sync-status');
+    if (existing) existing.remove();
+
+    var el = document.createElement('div');
+    el.id = 'umeboshi-sync-status';
+    // タイプ別の色設定
+    var bg = type === 'success' ? '#1a3a1a' : type === 'error' ? '#3a1a1a' : '#1a1a3a';
+    var border = type === 'success' ? '#2a5a2a' : type === 'error' ? '#5a2a2a' : '#2a2a5a';
+    var color = type === 'success' ? '#4ade80' : type === 'error' ? '#ef4444' : '#6ea8fe';
+
+    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:' + bg + ';border:1px solid ' + border + ';color:' + color + ';padding:10px 20px;border-radius:8px;z-index:10002;font-size:14px;';
+    el.textContent = message;
+    document.body.appendChild(el);
+
+    // 3秒後に自動消去
+    setTimeout(function() {
+      if (el.parentNode) el.remove();
+    }, 3000);
+  }
+
+  // === Q&Aをクラウドに保存（新規: POST / 編集: PATCH） ===
+  async function saveQa(noteId, qaData) {
+    var isEdit = qaData.id && qaData.id.length > 0;
+    var url = isEdit ? '/api/llm/save/' + encodeURIComponent(qaData.id) : '/api/llm/save';
+    return apiFetch(url, {
+      method: isEdit ? 'PATCH' : 'POST',
+      body: JSON.stringify({
+        noteId: noteId,
+        title: qaData.title || '',
+        content: qaData.content || ''
+      })
+    });
+  }
+
+  // === Q&Aをクラウドから読み込み ===
+  async function deleteQa(noteId, qaId) {
+    return apiFetch('/api/llm/qa/' + encodeURIComponent(noteId) + '/' + encodeURIComponent(qaId), {
+      method: 'DELETE'
+    });
+  }
+  async function loadQa(noteId) {
+    return apiFetch('/api/llm/qa/' + encodeURIComponent(noteId), {
+      method: 'GET'
+    });
+  }
+
+  // === 公開API ===
+  return {
+    pullFromCloud: pullFromCloud,
+    pushToCloud: pushToCloud,
+    saveQa: saveQa,
+    deleteQa: deleteQa,
+    loadQa: loadQa,
+    apiFetch: apiFetch,
+    showSyncStatus: showSyncStatus
+  };
+})();
+</script>
+
+
+
+<script>
+  // カード切り替え時のフェードアニメーションを無効化
+  qFade = 0;
+  if (typeof anki !== 'undefined') anki.qFade = qFade;
+</script>
+
+
+
+<!-- カラフルタグ表示 -->
+{{#Tags}}
+<div id="tags-container">{{clickable::Tags}}</div>
+<script>
+  var tagContainer = document.getElementById("tags-container")
+  var tagList;
+
+  // 子要素がない場合 (初回表示): kbd要素を生成
+  if (tagContainer.childElementCount == 0) {
+    tagList = tagContainer.innerHTML.split(" ");
+    var kbdList = [];
+    var newTagContent = document.createElement("div");
+
+    // 各タグをkbd要素として装飾
+    for (var i = 0; i < tagList.length; i++) {
+      var newTag = document.createElement("kbd");
+      var tag = tagList[i];
+      // タグレベル指定がある場合、末尾Nレベルのみ表示
+      if(numTagLevelsToShow != 0){
+        tag = tag.split('::').slice(-numTagLevelsToShow).join("::");
+      }
+      newTag.innerHTML = tag;
+      newTagContent.append(newTag)
+    }
+    tagContainer.innerHTML = newTagContent.innerHTML;
+    tagContainer.style.cursor = "default";
+  }
+  else {
+    // 既存の子要素からタグリストを取得
+    tagList = Array.from(tagContainer.children).map(e => e.innerText);
+  }
+
+  // グローバルにタグリストを公開 (autoReveal等で使用)
+  globalThis.tagList = tagList.map(t => t.trim().toLowerCase());
+
+  // 特定タグが含まれる場合、赤背景で強調
+  if (tagContainer.innerHTML.indexOf(tagID) != -1) {
+    tagContainer.style.backgroundColor = "rgba(251,11,11,.15)";
+  }
+
+  // タグは常時表示（切替機能なし）
+</script>
+{{/Tags}}
