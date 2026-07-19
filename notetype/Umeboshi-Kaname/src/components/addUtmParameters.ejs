@@ -1,0 +1,34 @@
+<%# UTMパラメータ自動付与コンポーネント
+- Sketchyリンクには utm_medium=partnership を付与
+- その他のリンクには utm_source=ankihub を付与
+_%>
+
+<script>
+    // 全アンカータグをループ
+    for(const anchor of document.querySelectorAll("a")) {
+        const hrefAttr = anchor.getAttribute("href");
+        // http/https以外のリンクはスキップ
+        if (!hrefAttr.startsWith("http://") && !hrefAttr.startsWith("https://")) {
+            continue;
+        }
+        try {
+            const url = new URL(anchor.href);
+            const params = new Map();
+            // ホスト名でUTMパラメータを分岐
+            if (url.hostname.endsWith("sketchy.com")) {
+                params.set("utm_medium", "partnership");
+            } else {
+                params.set("utm_source", "ankihub");
+            }
+            // 既存パラメータがない場合のみ付与
+            for(const [key, value] of params.entries()) {
+                if(!url.searchParams.get(key)) {
+                    url.searchParams.set(key, value);
+                }
+            }
+            anchor.href = url.toString();
+        } catch {
+            // URL解析失敗時はスキップ
+        }
+    }
+</script>

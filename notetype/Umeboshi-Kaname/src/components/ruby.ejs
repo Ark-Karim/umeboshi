@@ -1,0 +1,97 @@
+<%# ruby.ejs - ルビ表示: 遅延フェードイン + 言語切替 (Umeboshi-Kaname のみ) %>
+<%# 注意: ruby/rt の基本スタイルは contentsStyle.ejs に定義済み %>
+<style>
+  /* ~~~~~~~~~ RUBY REVEAL (遅延表示) ~~~~~~~~~ */
+  rt {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity var(--ruby-fade-duration, 0.3s) ease;
+  }
+
+  .ruby-revealed rt {
+    visibility: visible;
+    opacity: 1;
+  }
+</style>
+
+<script>
+  // ##############  RUBY REVEAL  ##############
+  // ルビ遅延表示 + 言語切替機能
+  (function() {
+    var FADE_DURATION = 300; // ms
+    var DEFAULT_DELAY_SEC = 6;
+
+    function applyRubyReveal() {
+      try {
+        var rubyLang = UmeboshiStorage.get('ui.rubyLang') || 'en';
+        var delaySec = UmeboshiStorage.get('ui.rubyDelaySec');
+        if (delaySec === undefined || delaySec === null) delaySec = DEFAULT_DELAY_SEC;
+
+        // CSS変数でfade durationを設定
+        document.documentElement.style.setProperty('--ruby-fade-duration', FADE_DURATION + 'ms');
+
+        // 言語切替: ja のとき ruby と rt のテキストを入れ替え
+        if (rubyLang === 'ja') {
+          var rubyElements = document.querySelectorAll('ruby');
+          for (var i = 0; i < rubyElements.length; i++) {
+            var rubyEl = rubyElements[i];
+
+            // すべてのrt要素を取得（複数rt対応: per-character furigana）
+            var rtElements = rubyEl.querySelectorAll('rt');
+            if (rtElements.length === 0) continue;
+
+            // cloze span を含むルビはスキップ（Ankiの穴埋め表示を壊さないため）
+            if (rubyEl.querySelector('.cloze')) continue;
+
+            // ruby の子テキストノードのみ収集（rtの子孫テキストは含まない）
+            var textNodes = [];
+            for (var j = 0; j < rubyEl.childNodes.length; j++) {
+              var node = rubyEl.childNodes[j];
+              if (node.nodeType === 3) {
+                textNodes.push(node);
+              }
+            }
+
+            // ペア数 = min(テキストノード数, rt要素数)
+            var pairCount = Math.min(textNodes.length, rtElements.length);
+            if (pairCount === 0) continue;
+
+            // 元のテキストを保存
+            var origTexts = [];
+            var origRts = [];
+            for (var p = 0; p < pairCount; p++) {
+              origTexts.push(textNodes[p].textContent || '');
+              origRts.push(rtElements[p].textContent || '');
+            }
+
+            // 入れ替え: base[p] ↔ rt[p]（各ペアごと）
+            for (var p = 0; p < pairCount; p++) {
+              if (origTexts[p] && origRts[p]) {
+                textNodes[p].textContent = origRts[p];
+                rtElements[p].textContent = origTexts[p];
+              }
+            }
+          }
+        }
+
+        // 遅延後に .ruby-revealed クラスを付与
+        var delayMs = Math.max(0, delaySec) * 1000;
+        setTimeout(function() {
+          document.body.classList.add('ruby-revealed');
+        }, delayMs);
+
+      } catch (e) {
+        console.error('RubyReveal error:', e);
+        // エラー時も即表示
+        document.body.classList.add('ruby-revealed');
+      }
+    }
+
+    // DOMContentLoaded で初期化
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyRubyReveal);
+    } else {
+      applyRubyReveal();
+    }
+  })();
+</script>

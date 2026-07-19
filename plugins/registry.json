@@ -1,0 +1,22 @@
+{
+  "$schema": "./registry.schema.json",
+  "description": "Umeboshi plugin registry — maps backend types to active plugins. To switch backends, change the plugin name here. Plugins are auto-discovered from subdirectories matching their type.",
+  "backends": {
+    "transcribe": {
+      "active": "fireworks-whisper",
+      "description": "Converts audio/video files to text. Default: Fireworks Whisper API."
+    },
+    "generate": {
+      "active": "claude-code",
+      "description": "Generates Anki cards from structured text. Default: Claude Code + DeepSeek."
+    },
+    "import": {
+      "active": "ankiconnect",
+      "description": "Imports generated cards into Anki. Default: AnkiConnect (localhost:8765)."
+    },
+    "notetype": {
+      "active": "umeboshi-kaname",
+      "description": "Card rendering template (Front/Back/Styling). Default: Umeboshi-Kaname."
+    }
+  }
+}

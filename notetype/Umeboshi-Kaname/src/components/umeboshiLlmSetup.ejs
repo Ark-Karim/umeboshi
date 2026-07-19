@@ -1,0 +1,361 @@
+<script>
+  // ##############  UMEBOSHI LLM SETUP (v2 - ClaudeFlare)  ##############
+  // ClaudeFlareプロキシ経由のLLM API通信モジュール（SSEストリーミング対応）
+
+  var UmeboshiLLM = (function() {
+
+    // === ClaudeFlare SSEエンドポイントからストリームレスポンスを取得 ===
+    // コールバック: onChunk（テキストチャンク）、onDone（完了）、onError（エラー）、onThinking（思考過程）
+    async function streamFromClaudeFlare(message, context, onChunk, onDone, onError, onThinking) {
+      var baseUrl = UmeboshiStorage.get('claudeflareUrl');
+      var token = UmeboshiStorage.get('claudeflareToken');
+
+      // 設定未完了の場合はエラー
+      if (!baseUrl || !token) {
+        onError('ClaudeFlare not configured. Open settings (s key) to set up.');
+        return;
+      }
+
+      var url = baseUrl.replace(/\/+$/, '') + '/api/llm/chat';
+
+      // Thinking設定を読み込み
+      var thinkingEnabled = false;
+      try {
+        var data = UmeboshiStorage.load();
+        if (data && data.ui) {
+          thinkingEnabled = !!data.ui.thinkingEnabled;
+        }
+      } catch (e) {}
+
+      try {
+        // POSTリクエストでSSEストリームを開始
+        var res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            message: message,
+            context: context || {},
+            thinking: {
+              enabled: thinkingEnabled
+            }
+          })
+        });
+
+        // HTTPエラーハンドリング
+        if (!res.ok) {
+          var errText = await res.text();
+          try {
+            var errJson = JSON.parse(errText);
+            onError(errJson.error || ('Server error: ' + res.status));
+          } catch (e) {
+            onError('Server error: ' + res.status);
+          }
+          return;
+        }
+
+        // === SSEストリームの読み取り ===
+        // res.body が null の場合（一部 WebView 環境）はフォールバック
+        if (!res.body || typeof res.body.getReader !== 'function') {
+          var fullText = await res.text();
+          // フォールバック: 全テキストを一括パース
+          var lines = fullText.split('\n');
+          for (var fi = 0; fi < lines.length; fi++) {
+            var fbLine = lines[fi].trim();
+            if (!fbLine.startsWith('data: ')) continue;
+            try {
+              var fbData = JSON.parse(fbLine.slice(6));
+              if (fbData.type === 'thinking' && fbData.content) {
+                if (onThinking) onThinking(fbData.content);
+              } else if (fbData.type === 'chunk' && fbData.content) {
+                onChunk(fbData.content);
+              } else if (fbData.type === 'done') {
+                onDone(fbData.usage || { input: 0, output: 0 });
+              } else if (fbData.type === 'error') {
+                onError(fbData.content || 'Unknown stream error');
+              }
+            } catch (e) {}
+          }
+          return;
+        }
+
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+
+        while (true) {
+          var result;
+          try {
+            result = await reader.read();
+          } catch (readErr) {
+            onError('Stream read error: ' + (readErr.message || readErr));
+            return;
+          }
+          if (result.done) break;
+
+          // バッファにデコード結果を追加
+          buffer += decoder.decode(result.value, {
+            stream: true
+          });
+          var lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // 未完了行をバッファに保持
+
+          // 各行をパースしてコールバックに渡す
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line.startsWith('data: ')) continue;
+
+            var dataStr = line.slice(6);
+            try {
+              var data = JSON.parse(dataStr);
+
+              // イベントタイプ別の処理
+              if (data.type === 'thinking' && data.content) {
+                if (onThinking) onThinking(data.content); // 思考過程
+              } else if (data.type === 'chunk' && data.content) {
+                onChunk(data.content); // テキストチャンク
+              } else if (data.type === 'done') {
+                onDone(data.usage || {
+                  input: 0,
+                  output: 0
+                }); // 完了（トークン使用量）
+              } else if (data.type === 'error') {
+                onError(data.content || 'Unknown stream error'); // ストリームエラー
+              }
+            } catch (e) {
+              // パース不可のチャンクはスキップ
+            }
+          }
+        }
+      } catch (err) {
+        // ネットワークエラー処理
+        if (err.name === 'AbortError') {
+          onError('Request cancelled.');
+        } else {
+          onError('Error: ' + (err.message || err));
+        }
+      }
+    }
+
+    // === 現在のカード番号をbodyクラスから取得 ===
+    function __getCardNumber() {
+      var m = document.body.className.match(/card(\d+)/);
+      return m ? m[1] : '0';
+    }
+
+    // === カードフィールドからコンテキストオブジェクトを構築 ===
+    function buildContext(toggles) {
+      var context = {};
+      // 生テキスト（{c1::xxx}マーカー付き）を優先、なければレンダリング済みテキスト
+      var rawTextEl = document.getElementById('raw-text');
+      var textEl = document.getElementById('text');
+      var extraEl = document.getElementById('extra');
+
+      // textフィールドの内容をコンテキストに追加（最大500文字）
+      if (toggles.text) {
+        var rawText = '';
+        if (rawTextEl) {
+          rawText = (rawTextEl.textContent || '').trim();
+        }
+        if (!rawText && textEl) {
+          rawText = (textEl.textContent || '').trim();
+        }
+        if (rawText) {
+          var cardNum = __getCardNumber();
+          // {cN::xxx} を処理: 現在のカードはマーカー維持、他はマーカー除去（文脈扱い）
+          var processed = rawText.replace(/\{c(\d+)::(.*?)\}/g, function(match, num, answer) {
+            if (num === cardNum) {
+              return match; // 現在のカード: {c1::xxx} を維持
+            }
+            return answer; // 別カード: マーカー除去し回答テキストのみ
+          });
+          context.text = processed.substring(0, 500);
+        }
+      }
+      // extraフィールドの内容をコンテキストに追加（最大500文字）
+      if (toggles.extra && extraEl) {
+        var extra = (extraEl.textContent || '').trim();
+        if (extra) context.extra = extra.substring(0, 500);
+      }
+      return context;
+    }
+
+    // === 公開API ===
+    return {
+      streamFromClaudeFlare: streamFromClaudeFlare,
+      buildContext: buildContext
+    };
+  })();
+
+  // ============================================================
+  // marked.js CDN 読み込み（qa/llm両セクションで利用）
+  // ============================================================
+  if (typeof marked === 'undefined') {
+    var markedScript = document.createElement('script');
+    markedScript.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+    markedScript.onload = function() {
+      if (typeof marked !== 'undefined' && marked.setOptions) {
+        marked.setOptions({
+          breaks: true,
+          gfm: true
+        });
+      }
+    };
+    document.head.appendChild(markedScript);
+  }
+
+  // ============================================================
+  // 共有ヘルパー関数（qa/llm両セクションから利用）
+  // ============================================================
+
+  // === Markdown→HTML変換 ===
+  function __llmRenderMarkdown(text) {
+    if (typeof marked !== 'undefined' && marked.parse) {
+      try {
+        return marked.parse(text);
+      } catch (e) {
+        return '<p>' + __llmEscapeHtml(text) + '</p>';
+      }
+    }
+    return '<p>' + __llmEscapeHtml(text) + '</p>';
+  }
+
+  // === HTMLエスケープ ===
+  function __llmEscapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // === Note ID 取得 ===
+  function __llmGetNoteId() {
+    var el = document.getElementById('umeboshi-note-id');
+    if (el && el.textContent.trim()) return el.textContent.trim();
+    return null;
+  }
+
+  // === ClaudeFlareからQ&Aを読み込み ===
+  function __llmLoadQaFromCloud() {
+    var noteId = __llmGetNoteId();
+    if (!noteId) return;
+
+    var qaSection = document.getElementById('umeboshi-qa-section');
+    if (!qaSection) return;
+
+    UmeboshiSync.loadQa(noteId)
+      .then(function(data) {
+        if (!data || !data.conversations || data.conversations.length === 0) {
+          var listEl = qaSection.querySelector('.umeboshi-qa-list');
+          if (listEl) listEl.innerHTML = '';
+          return;
+        }
+
+        var listEl = qaSection.querySelector('.umeboshi-qa-list');
+        if (!listEl) return;
+
+        listEl.innerHTML = '';
+
+        // 降順（新しい順）で表示
+        var conversations = data.conversations.slice().reverse();
+
+        for (var i = 0; i < conversations.length; i++) {
+          var qa = conversations[i];
+          var qaId = qa.id || ('qa-' + i);
+
+          var item = document.createElement('div');
+          item.className = 'umeboshi-qa-item';
+
+          var btn = document.createElement('button');
+          btn.className = 'button-general umeboshi-qa-btn';
+          btn.textContent = qa.title || 'QA ' + (i + 1);
+          btn.setAttribute('data-qa-id', qaId);
+
+          var content = document.createElement('div');
+          content.className = 'umeboshi-qa-content content-container';
+          content.id = 'content-qa-' + qaId;
+          content.innerHTML = __llmRenderMarkdown(qa.content || '');
+
+          // ✏️編集ボタン
+          var editBtn = document.createElement('button');
+          editBtn.className = 'button-general umeboshi-qa-edit-btn';
+          editBtn.textContent = '✏️';
+          editBtn.style.display = 'none';
+          editBtn.onclick = (function(qaItem) {
+            return function(e) {
+              e.stopPropagation();
+              UmeboshiChat.openEditModal(qaItem.id, qaItem.title, qaItem.content);
+            };
+          })(qa);
+          content.appendChild(editBtn);
+
+          // クリックハンドラ（展開時に✏️ボタン表示）
+          btn.onclick = (function(c, b, eb) {
+            return function() {
+              c.classList.toggle('open');
+              b.classList.toggle('active');
+              eb.style.display = c.classList.contains('open') ? 'inline-block' : 'none';
+            };
+          })(content, btn, editBtn);
+
+          item.appendChild(btn);
+          item.appendChild(content);
+          listEl.appendChild(item);
+        }
+      })
+      .catch(function(err) {
+        // エラー時も＋ボタンを表示するためセクションを表示
+        var listEl = qaSection.querySelector('.umeboshi-qa-list');
+        if (listEl) listEl.innerHTML = '';
+      });
+  }
+
+  // === Q&A をClaudeFlareに保存 ===
+  function __llmSaveSingleResponse(rawText, isJson) {
+    var noteId = __llmGetNoteId();
+    if (!noteId) {
+      __llmSetStatus('Note ID not found');
+      return;
+    }
+
+    var qaData = {
+      content: rawText
+    };
+
+    if (isJson) {
+      try {
+        var parsed = JSON.parse(rawText);
+        if (parsed.title && parsed.content) {
+          qaData.title = parsed.title;
+          qaData.content = parsed.content;
+        }
+      } catch (e) {}
+    }
+
+    if (!qaData.title) {
+      qaData.title = rawText.substring(0, 30) + (rawText.length > 30 ? '...' : '');
+    }
+
+    __llmSetStatus('Saving...');
+    UmeboshiSync.saveQa(noteId, qaData)
+      .then(function() {
+        __llmSetStatus('Saved to Cloud ✓');
+        __llmLoadQaFromCloud();
+      })
+      .catch(function(err) {
+        __llmSetStatus('Save failed: ' + err.message);
+      });
+  }
+
+  // === ステータス表示 ===
+  function __llmSetStatus(text) {
+    var el = document.getElementById('umeboshi-llm-status');
+    if (el) el.textContent = text;
+  }
+
+  // === qa-section 初期化 ===
+  function __initQa() {
+    setTimeout(function() {
+      __llmLoadQaFromCloud();
+    }, 2000);
+  }
+</script>

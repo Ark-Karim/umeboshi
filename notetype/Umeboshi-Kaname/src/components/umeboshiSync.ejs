@@ -1,0 +1,197 @@
+<script>
+// ##############  UMEBOSHI SYNC (ClaudeFlare)  ##############
+// ClaudeFlare API経由のクラウド同期モジュール（GitHub同期の後継）
+
+var UmeboshiSync = (function() {
+
+  // === API fetchヘルパー（認証付き） ===
+  async function apiFetch(endpoint, options) {
+    var baseUrl = UmeboshiStorage.get('claudeflareUrl');
+    var token = UmeboshiStorage.get('claudeflareToken');
+
+    // 設定未完了の場合はエラー
+    if (!baseUrl || !token) {
+      throw new Error('ClaudeFlare not configured. Open settings to set up.');
+    }
+
+    // URL末尾のスラッシュを除去してエンドポイントを結合
+    var url = baseUrl.replace(/\/+$/, '') + endpoint;
+    var opts = Object.assign({}, options || {});
+    // 認証ヘッダーを設定
+    opts.headers = Object.assign({
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    }, opts.headers || {});
+
+    var res = await fetch(url, opts);
+    var text = await res.text();
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      throw new Error('サーバーエラー: 応答がJSONではありません。 ' + text.substring(0, 100));
+    }
+
+    // APIエラーチェック
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || ('API error: ' + res.status));
+    }
+
+    return data.data;
+  }
+
+  // === クラウドから設定をプル ===
+  async function pullFromCloud() {
+    var remoteSettings = await apiFetch('/api/sync/pull', { method: 'POST' });
+
+    if (!remoteSettings) {
+      throw new Error('No settings found on server.');
+    }
+
+    var local = UmeboshiStorage.load();
+    var localSyncedAt = local.syncedAt || '';
+    var remoteUpdatedAt = remoteSettings.updatedAt || '';
+
+    // 競合チェック: ローカルとリモートの更新日時が異なる場合
+    if (localSyncedAt && remoteUpdatedAt && localSyncedAt !== remoteUpdatedAt) {
+      var choice = await showConflictDialog(local, remoteSettings);
+      if (choice === 'local') {
+        // ローカルをクラウドにプッシュ
+        await pushToCloud();
+        showSyncStatus('Local settings pushed to cloud ✓', 'success');
+        return local;
+      }
+      // 'cloud'の場合はリモート設定を使用
+    }
+
+    // リモート設定を適用（トークンとURLはローカル値を保持）
+    remoteSettings.claudeflareToken = local.claudeflareToken;
+    remoteSettings.claudeflareUrl = local.claudeflareUrl;
+    remoteSettings.syncedAt = new Date().toISOString();
+    UmeboshiStorage.save(remoteSettings);
+
+    showSyncStatus('Settings pulled from cloud ✓', 'success');
+    return remoteSettings;
+  }
+
+  // === 設定をクラウドにプッシュ ===
+  async function pushToCloud() {
+    var data = UmeboshiStorage.load();
+
+    // トークンとURLはサーバーに送信しない（セキュリティ対策）
+    var toPush = JSON.parse(JSON.stringify(data));
+    delete toPush.claudeflareToken;
+    delete toPush.claudeflareUrl;
+
+    await apiFetch('/api/sync/push', {
+      method: 'POST',
+      body: JSON.stringify(toPush)
+    });
+
+    // 同期日時を更新
+    UmeboshiStorage.set('syncedAt', new Date().toISOString());
+    showSyncStatus('Settings pushed to cloud ✓', 'success');
+  }
+
+  // === 競合ダイアログを表示（'cloud'または'local'を返すPromise） ===
+  function showConflictDialog(localSettings, remoteSettings) {
+    return new Promise(function(resolve) {
+      // オーレーレイを作成
+      var overlay = document.createElement('div');
+      overlay.id = 'umeboshi-sync-conflict';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10001;display:flex;align-items:center;justify-content:center;';
+
+      // ダイアログボックス
+      var box = document.createElement('div');
+      box.style.cssText = 'background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:24px;max-width:400px;width:90%;color:#e5e5e5;text-align:center;';
+
+      box.innerHTML =
+        '<h3 style="margin:0 0 12px 0;font-size:16px;">⚠️ Settings Conflict Detected</h3>' +
+        '<p style="margin:0 0 20px 0;font-size:14px;color:#a0a0a0;">Conflicting settings found between cloud and local.<br>Which settings would you like to KEEP?</p>' +
+        '<div style="display:flex;gap:12px;justify-content:center;">' +
+        '<button id="sync-keep-cloud" style="padding:10px 24px;border:1px solid #555;border-radius:8px;background:#2a2a2a;color:#e5e5e5;cursor:pointer;font-size:14px;">Cloud ☁️</button>' +
+        '<button id="sync-keep-local" style="padding:10px 24px;border:1px solid #555;border-radius:8px;background:#2a2a2a;color:#e5e5e5;cursor:pointer;font-size:14px;">Local 📱</button>' +
+        '</div>';
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      // ダイアログを閉じる関数
+      var cleanup = function() {
+        overlay.remove();
+      };
+
+      // ボタンクリックで選択を返す
+      document.getElementById('sync-keep-cloud').onclick = function() {
+        cleanup();
+        resolve('cloud');
+      };
+
+      document.getElementById('sync-keep-local').onclick = function() {
+        cleanup();
+        resolve('local');
+      };
+    });
+  }
+
+  // === 同期ステータスメッセージを表示 ===
+  function showSyncStatus(message, type) {
+    // 既存のステータス表示を除去
+    var existing = document.getElementById('umeboshi-sync-status');
+    if (existing) existing.remove();
+
+    var el = document.createElement('div');
+    el.id = 'umeboshi-sync-status';
+    // タイプ別の色設定
+    var bg = type === 'success' ? '#1a3a1a' : type === 'error' ? '#3a1a1a' : '#1a1a3a';
+    var border = type === 'success' ? '#2a5a2a' : type === 'error' ? '#5a2a2a' : '#2a2a5a';
+    var color = type === 'success' ? '#4ade80' : type === 'error' ? '#ef4444' : '#6ea8fe';
+
+    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:' + bg + ';border:1px solid ' + border + ';color:' + color + ';padding:10px 20px;border-radius:8px;z-index:10002;font-size:14px;';
+    el.textContent = message;
+    document.body.appendChild(el);
+
+    // 3秒後に自動消去
+    setTimeout(function() {
+      if (el.parentNode) el.remove();
+    }, 3000);
+  }
+
+  // === Q&Aをクラウドに保存（新規: POST / 編集: PATCH） ===
+  async function saveQa(noteId, qaData) {
+    var isEdit = qaData.id && qaData.id.length > 0;
+    var url = isEdit ? '/api/llm/save/' + encodeURIComponent(qaData.id) : '/api/llm/save';
+    return apiFetch(url, {
+      method: isEdit ? 'PATCH' : 'POST',
+      body: JSON.stringify({
+        noteId: noteId,
+        title: qaData.title || '',
+        content: qaData.content || ''
+      })
+    });
+  }
+
+  // === Q&Aをクラウドから読み込み ===
+  async function deleteQa(noteId, qaId) {
+    return apiFetch('/api/llm/qa/' + encodeURIComponent(noteId) + '/' + encodeURIComponent(qaId), {
+      method: 'DELETE'
+    });
+  }
+  async function loadQa(noteId) {
+    return apiFetch('/api/llm/qa/' + encodeURIComponent(noteId), {
+      method: 'GET'
+    });
+  }
+
+  // === 公開API ===
+  return {
+    pullFromCloud: pullFromCloud,
+    pushToCloud: pushToCloud,
+    saveQa: saveQa,
+    deleteQa: deleteQa,
+    loadQa: loadQa,
+    apiFetch: apiFetch,
+    showSyncStatus: showSyncStatus
+  };
+})();
+</script>

@@ -1,0 +1,50 @@
+<%#
+# カウントダウンタイマーコンポーネント
+# グローバル変数:
+- timeOverMsg: string (タイムアップ時のメッセージHTML)
+- minutes: number (タイマー分数)
+- seconds: number (タイマー秒数)
+_%>
+<!-- カウントダウンタイマー表示 -->
+<div class="timer" id="s2"></div>
+<script>
+  /**
+   * カウントダウンタイマー
+   * @param elementName - 表示先要素ID
+   * @param minutes - 分
+   * @param seconds - 秒
+   */
+  function countdown(elementName, minutes, seconds) {
+    var element, endTime, mins, msLeft, time;
+
+    // 2桁表示のゼロパディング
+    function twoDigits( n ) {
+      return (n <= 9 ? "0" + n : n);
+    }
+
+    // タイマー更新処理 (再帰呼び出し)
+    function updateTimer() {
+      msLeft = endTime - (+new Date);
+
+      if ( msLeft < 1000 ) {
+        // タイムアップ: メッセージ表示
+        element.innerHTML = timeOverMsg;
+      } else {
+        // 残り時間を表示
+        time = new Date( msLeft );
+        mins = time.getUTCMinutes();
+        element.innerHTML = mins + ':' + twoDigits(time.getUTCSeconds());
+        // 次の更新をスケジュール
+        setTimeout( updateTimer, time.getUTCMilliseconds() + 500 );
+      }
+    }
+
+    // タイマー初期化
+    element = document.getElementById(elementName);
+    endTime = (+new Date) + 1000 * (60*minutes + seconds) + 500;
+    updateTimer();
+  }
+
+  // タイマー開始 (設定値は countdownTimer.js で定義)
+  countdown("s2", minutes, seconds);
+</script>

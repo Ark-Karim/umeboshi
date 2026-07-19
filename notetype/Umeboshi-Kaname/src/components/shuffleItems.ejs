@@ -1,0 +1,135 @@
+<%#
+リスト・画像・文章の順序をシャッフルし、フロント/バック間で同じ順序を維持
+
+# Parameters
+- selector: string — 追加のシャッフル対象セレクタ
+
+# Components
+components/ankiPersistence — シャッフル順序の保存/読み込み
+
+_%>
+
+<!-- BEGIN WRAPPER CODE shuffle — 順序シャッフル機能 -->
+
+<script>
+    (() => {
+        // === セレクタの設定 ===
+        <%_ if (typeof selector !== "undefined") { _%>
+        const selectors = [".shuffle", "<%- selector %>"];
+        <%_ } else { _%>
+        const selectors = [".shuffle"];
+        <%_ } _%>
+        // 保存済みのシャッフルマップを読み込み
+        const shuffleMap = Persistence.getItem("shuffle") || {};
+        const containerSelector = selectors.join(", ");
+
+        // === フロント/バック判定 ===
+        function isFront() {
+            const hasHrMarker = document.querySelector("hr[id=answer]");
+            const hasClozeFieldClass = document.querySelector(".clozefield");
+            return !hasHrMarker && !hasClozeFieldClass;
+        }
+
+        // === Fisher-Yatesシャッフル（indexMapで順序を固定） ===
+        function shuffle(array, indexMap) {
+            let currentIndex = array.length;
+            while (currentIndex != 0) {
+                currentIndex--;
+                // 既存のマップがあれば同じ順序、なければ新規ランダム
+                let randomIndex = indexMap[currentIndex] !== undefined ? indexMap[currentIndex] : Math.floor(Math.random() * (currentIndex + 1));
+                indexMap[currentIndex] = randomIndex;
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex],
+                    array[currentIndex],
+                ];
+            }
+        }
+
+        // === 親要素の中で最も近いID付き要素を取得 ===
+        function getNearestIdElement(element) {
+            let current = element;
+            while (current && current !== document.body) {
+                if (current.id) {
+                    return current;
+                }
+                current = current.parentElement;
+            }
+            return null;
+        }
+
+        // === スコープ内でのインデックスを取得 ===
+        function getScopedIndex(element, selector) {
+            const scope = getNearestIdElement(element);
+            const candidates = scope
+                ? Array.from(scope.querySelectorAll(selector))
+                : Array.from(document.querySelectorAll(selector));
+            const index = candidates.indexOf(element);
+            return index === -1 ? 0 : index;
+        }
+
+        // === シャッフルマップのキーを生成 ===
+        function shuffleKey(element, groupType, selector) {
+            const scope = getNearestIdElement(element);
+            const scopeKey = scope ? `${scope.tagName.toLowerCase()}#${scope.id}` : "document";
+            const index = selector ? getScopedIndex(element, selector) : 0;
+            return `${scopeKey}:${groupType}:${index}`;
+        }
+
+        // === 要素配列をシャッフルしてDOMに入れ替え ===
+        function shuffleElements(elements, mapKey) {
+            // no-shuffleクラス配下の要素は除外
+            elements = elements.filter(e => !e.matches(".no-shuffle *"));
+            if (elements.length === 0) {
+                return;
+            }
+            const shuffledElements = Array.from(elements);
+            const indexMap = shuffleMap[mapKey] || {};
+            // プレースホルダーに置き換え
+            elements = elements.map(el => {
+                const placeholder = document.createTextNode('');
+                el.replaceWith(placeholder);
+                return placeholder;
+            });
+            shuffle(shuffledElements, indexMap);
+            shuffleMap[mapKey] = indexMap;
+            // シャッフル後の要素を配置
+            for (let i = 0; i < elements.length; i++) {
+                elements[i].replaceWith(shuffledElements[i]);
+            }
+        }
+
+        // === リスト要素をシャッフル ===
+        function shuffleList(listElement) {
+            const items = Array.from(listElement.querySelectorAll("li"));
+            shuffleElements(items, shuffleKey(listElement, "list", "ol, ul"));
+        }
+
+        // === セレクタに一致するコンテナをシャッフル処理 ===
+        for (const selector of selectors) {
+            for (const container of document.querySelectorAll(selector)) {
+                // リスト要素をシャッフル
+                if (["UL", "OL"].includes(container.tagName)) {
+                    shuffleList(container);
+                }
+                // ネストされたリストもシャッフル
+                for (const parentElement of container.querySelectorAll(
+                    "ol, ul"
+                )) {
+                    shuffleList(parentElement);
+                }
+                // 画像をシャッフル
+                const images = Array.from(container.querySelectorAll("img"));
+                shuffleElements(images, shuffleKey(container, "images", containerSelector));
+            }
+        }
+
+        // === フロント: シャッフル順序を保存、バック: クリーンアップ ===
+        if (isFront()) {
+            Persistence.setItem("shuffle", shuffleMap);
+        } else {
+            Persistence.removeItem("shuffle");
+        }
+    })();
+</script>
+
+<!-- END WRAPPER CODE -->

@@ -1,0 +1,28 @@
+<%#
+# 概要
+- ankingAddEventListener 関数を提供
+- document.addEventListener と同様だが、カード切り替え時に
+  前回のイベントリスナーを自動解除する機能を持つ
+_%>
+<!-- カード切り替え対応イベントリスナー -->
+<script>
+  // 前回のカードで登録したリスナーを全て解除
+  if (window.ankingEventListeners) {
+    for (const listener of ankingEventListeners) {
+      const type = listener[0]
+      const handler = listener[1]
+      document.removeEventListener(type, handler)
+    }
+  }
+  // リスナー管理配列を初期化
+  window.ankingEventListeners = []
+
+  /**
+   * イベントリスナーを登録し、管理配列に追加
+   * 次回カード切り替え時に自動解除される
+   */
+  window.ankingAddEventListener = function(type, handler) {
+    document.addEventListener(type, handler)
+    window.ankingEventListeners.push([type, handler])
+  }
+</script>

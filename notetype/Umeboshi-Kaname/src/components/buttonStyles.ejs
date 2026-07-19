@@ -1,0 +1,59 @@
+<%# buttonStyles.ejs - hintButton, qa-btn 共通スタイル %>
+<style>
+  /* ~~~~~~~~~BUTTON LAYOUT (Panel-based Accordion)~~~~~~~~~ */
+  .button-general {
+    outline: 0;
+    border-radius: 0.8rem;
+    border: 1px solid transparent;
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    align-items: center;
+    font-weight: 600;
+    color: #ccc !important;
+    transition: color 0.3s ease;
+
+    background: #333;
+    margin: .3rem;
+    width: auto;
+    font-weight: 600;
+
+  }
+
+  .button-general:hover {
+    background: #222;
+    border-color: #444;
+  }
+
+  .button-general img {
+    height: 0.571rem;
+    filter: brightness(0.9);
+  }
+
+
+
+
+  .expanded-button {
+    color: #fff !important;
+    background: #616161 !important;
+  }
+
+
+  #button-mq:not(.expanded-button) {
+    color: #ef4444 !important;
+  }
+
+
+  .tagBasedHintBtn {
+    display: none;
+  }
+
+  .horizontal-btn {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  /* oneByOne btn のスタイル上書き */
+  .button-one-by-one {
+    display: inline;
+  }
+</style>

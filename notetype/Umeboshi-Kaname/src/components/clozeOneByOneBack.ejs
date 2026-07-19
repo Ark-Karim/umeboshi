@@ -1,0 +1,458 @@
+<%# 
+
+# Parameters
+- optional: boolean
+If true, only cloze-one-by-one mode if {{oneByOne}} field is not empty. 
+
+# Components
+components/clozeOneByOneButtons
+components/ankingAddEventListener
+components/shortcutMatcher
+components/ankiPersistence
+
+# Global Variables
+- revealClozeShortcut: shortcut string
+- revealClozeWordShortcut: shortcut string
+- clozeHider: (elem) -> string
+
+# Notes
+- Exposes `toggleAllCloze` and `revealNextCloze` function
+- Hides #extra until all clozes are shown
+
+# How it works
+|                .cloze                   |
+| shown | .cloze-replacer | .cloze-hidden |
+
+When hideAllCloze() is called, all childNodes of .cloze is moved into .cloze-hidden, 
+and .cloze has two children: div.cloze-replacer that hides cloze with `clozeHider(div.cloze-hidden)`, 
+div.cloze-hidden with original cloze content that is hidden with display:none.
+
+When revealNextWord() is called, a word is selected from .cloze-hidden and is inserted before div.cloze-replacer
+_%>
+<%- include('src/components/autoflipBack.ejs') %>
+
+<!-- CLOZE ONE BY ONE SCRIPT -->
+<style>
+  .cloze-replacer:hover {
+    cursor: pointer;
+  }
+  .cloze-hidden {
+    display: none;
+  }
+  .cloze-replacer .hidden {
+    display: none;
+  }
+  #extra.hidden {
+    display: none;
+  }
+  .hidden {
+    display: none !important;
+    opacity: 0;
+  }
+  #umeboshi-qa-section,
+  #umeboshi-llm-section {
+    transition: opacity 0.1s ease-in;
+  }
+</style>
+
+<!-- Credit: Code for selective 1b1 clozes is adapted from the Ankizin project: https://ankiweb.net/shared/info/2058530482 -->
+
+<script>
+  (function() {
+    // enables cloze one-by-one even when one-by-one field is empty
+    // minNumberOfClozes is still considered in this case
+    // overridden in importance by selectiveOneByOne and minNumberOfClozes
+    var alwaysOneByOne = false;
+    var clozeOneByOneEnabled = true;
+
+    // === Timing Dot計測（各clozeごとのめくり間隔） ===
+    // windowグローバル変数で管理（AnkiDroid user action等のIIFE外からもアクセス可能にする）
+    window.__timingLastRevealTime = undefined;
+    window.__timingRevealIntervals = [];
+
+    // カウントダウン終了時のTiming Dotリセット用関数を公開
+    window.__umeboshiResetTimingForCountdown = function() {
+      window.__timingLastRevealTime = Date.now();
+      window.__timingRevealIntervals = [];
+    };
+
+    var oneByOneFieldNotEmpty = document.getElementById("one-by-one").textContent !== "";
+    <%_ if (optional === true) { _%>
+      clozeOneByOneEnabled = alwaysOneByOne || oneByOneFieldNotEmpty;
+    <%_ } _%>
+
+    // --- CHECK IF ONE BY ONE SHOULD BE ENABLED FOR THIS SPECIFIC CARD ---
+    /**
+     * Credit for the getCardNumber function goes to foenixx (GitHub) / ollevolle (AnkiWeb Forum)
+     */
+    const getCardNumber = function () {
+      clz = document.body.className;
+      const regex = /card(\d+)/gm;
+      let m;
+
+      if ((m = regex.exec(clz)) !== null) {
+        return m[1];
+      } else {
+        // Should only fire if card is not cloze
+        console.error("Cannot find cardN class of body element!");
+        return "0";
+      }
+    }
+
+    // parse the cloze numbers for which selectiveOneByOne is enabled
+    var clozeNumbers = document.getElementById("one-by-one").textContent.split(',').filter(element => element).map(Number)
+    var cardNumberIsOneByOne = !clozeNumbers.filter(n => !Number.isNaN(n)).length || clozeNumbers.includes(parseInt(getCardNumber()))
+
+    // check the amount of clozes -> disable OneByOne if less than minimum value wanted (minNumberOfClozes)
+    var numClozes = (minNumberOfClozes) ? document.querySelectorAll('.clozefield .cloze').length : 0
+
+    // stop OneByOne if selectiveOneByOne is not enabled for this specific card OR if OneByOne is disabled some other way
+    // -> show normal backside
+    if (selectiveOneByOne && !cardNumberIsOneByOne || numClozes < minNumberOfClozes) {
+      clozeOneByOneEnabled = false
+    }
+
+    if (!clozeOneByOneEnabled) {
+      return
+    }
+
+    // Needed for amboss to recognize first word in .cloze-hidden
+    const CLOZE_REPLACER_SEP = "<span class='hidden'> </span>"
+
+    const hideAllCloze = function(initial) {
+      let clozes = document.getElementsByClassName("cloze")
+      let count = 0 // hidden cloze count
+      for (const cloze of clozes) {
+        const existingHidden = cloze.getElementsByClassName("cloze-hidden")[0]
+        if (existingHidden) {
+          revealCloze(cloze);
+        }
+        if (cloze.offsetWidth === 0) {
+          continue
+        }
+        const clozeReplacer = document.createElement("span")
+        const clozeHidden = document.createElement("span")
+        clozeReplacer.classList.add("cloze-replacer")
+        clozeHidden.classList.add("cloze-hidden")
+        while (cloze.childNodes.length > 0) {
+          clozeHidden.appendChild(cloze.childNodes[0])
+        }
+        cloze.appendChild(clozeReplacer)
+        cloze.appendChild(clozeHidden)
+
+        var clozeHints = Persistence.getItem("clozeHints");
+        if (clozeHints && clozeHints[count]) {
+          clozeReplacer.classList.add("cloze-hint")
+          clozeReplacer.innerHTML = clozeHints[count] + CLOZE_REPLACER_SEP
+        } else {
+          clozeReplacer.innerHTML = clozeHider(cloze) + CLOZE_REPLACER_SEP
+        }
+        count += 1
+        if (initial) {
+          cloze.addEventListener("touchend", revealClozeClicked)
+          cloze.addEventListener("click", revealClozeClicked)
+          cloze.classList.add("one-by-one");
+        }
+      }
+      const extra = document.getElementById("extra");
+      if (extra) {
+        extra.classList.add("hidden");
+      }
+      const qaSection = document.getElementById("umeboshi-qa-section");
+      if (qaSection) {
+        qaSection.classList.add("hidden");
+      }
+      const llmSection = document.getElementById("umeboshi-llm-section");
+      if (llmSection) {
+        llmSection.classList.add("hidden");
+      }
+      for (const [field, autoReveal] of Object.entries(ButtonAutoReveal)) {
+        const container = document.querySelector(`[data-name="${field}"]`)
+          if (container) {
+            const tag = `autoopen::${field.toLowerCase().replace(' ', '_')}`
+            if (autoReveal || (globalThis.tagList && globalThis.tagList.includes(tag))) {
+              const link = container.getElementsByTagName("a")[0]
+              const button = container.getElementsByTagName("button")[0]
+              const hint = container.getElementsByTagName("div")[0]
+              button.classList.remove("expanded-button")
+              hint.style.display = "none"
+              link.style.display = ""
+          }
+        }
+      }
+    }
+    
+    // === TTS: Rubyベーステキスト抽出 ===
+    function extractRubyBaseText(element) {
+      var clone = element.cloneNode(true);
+      var rtElements = clone.querySelectorAll('rt');
+      for (var i = 0; i < rtElements.length; i++) {
+        rtElements[i].parentNode.removeChild(rtElements[i]);
+      }
+      return (clone.textContent || '').trim();
+    }
+
+    // === TTS: Clozeテキスト読み上げ（TTSClientに一元化） ===
+    function speakClozeText(element) {
+      // 設定チェック（デフォルトON）
+      var enabled = true;
+      try {
+        var d = UmeboshiStorage.load();
+        if (d && d.ui && d.ui.ttsEnabled === false) enabled = false;
+      } catch(e) {}
+
+      if (!enabled) return;
+
+      var text = extractRubyBaseText(element);
+      if (!text) return;
+
+      TTSClient.speak(text, 'en-US');
+    }
+
+    const revealCloze = function(cloze) {
+      const clozeReplacer = cloze.getElementsByClassName("cloze-replacer")[0]
+      const clozeHidden = cloze.getElementsByClassName("cloze-hidden")[0]
+      if (!clozeReplacer || !clozeHidden) return;
+
+      cloze.removeChild(clozeReplacer)
+      cloze.removeChild(clozeHidden)
+      while (clozeHidden.childNodes.length > 0) {
+        cloze.appendChild(clozeHidden.childNodes[0])
+      }
+      var now = Date.now();
+      window.__timingRevealIntervals.push(now - window.__timingLastRevealTime);
+      window.__timingLastRevealTime = now;
+      maybeRevealExtraField()
+      speakClozeText(cloze);
+    }
+    const revealClozeWord = function(cloze) {
+      const clozeReplacer = cloze.getElementsByClassName("cloze-replacer")[0]
+      const clozeHidden = cloze.getElementsByClassName("cloze-hidden")[0]
+      if (!clozeReplacer || !clozeHidden) return;
+
+      let range = new Range()
+      range.setStart(clozeHidden, 0)
+      const foundSpace = setRangeEnd(range, clozeHidden, "beforeFirstSpace")
+      if (!foundSpace) {
+        range.setEnd(clozeHidden, clozeHidden.childNodes.length)
+      }
+      // TTS: 抽出前にテキストをクローンで先取り
+      var wordClone = range.cloneContents();
+      var tempDiv = document.createElement('div');
+      tempDiv.appendChild(wordClone);
+      let fragment = range.extractContents()
+      cloze.insertBefore(fragment, clozeReplacer)
+      // TTS: 部分めくり時の単語読み上げ
+      speakClozeText(tempDiv);
+      // Extract whitespaces after word
+      range = new Range()
+      range.setStart(clozeHidden, 0)
+      const foundWord = setRangeEnd(range, clozeHidden, "beforeFirstChar")
+      if (!foundWord) {
+        range.setEnd(clozeHidden, clozeHidden.childNodes.length)
+      }
+      fragment = range.extractContents();
+      cloze.insertBefore(fragment, clozeReplacer)
+      if (!foundWord) {
+        cloze.removeChild(clozeHidden)
+        cloze.removeChild(clozeReplacer)
+        var now = Date.now();
+        window.__timingRevealIntervals.push(now - window.__timingLastRevealTime);
+        window.__timingLastRevealTime = now;
+        maybeRevealExtraField()
+        // TTS: 完全めくり時の全体読み上げ
+        speakClozeText(cloze);
+        return
+      }
+      clozeReplacer.innerHTML = clozeHider(clozeHidden) + CLOZE_REPLACER_SEP
+      if (clozeReplacer.classList.contains("cloze-hint")) [
+        clozeReplacer.classList.remove("cloze-hint")
+      ]
+      maybeRevealExtraField()
+    }
+
+    const revealNextClozeOf = (type) => {
+      const nextHidden = document.querySelector(".cloze-hidden")
+      if(!nextHidden) {
+          return
+      } 
+      const cloze = clozeElOfClozeHidden(nextHidden);
+      if (type === "word") {
+          revealClozeWord(cloze)
+      } else if (type === "cloze") {
+          revealCloze(cloze)
+      } else {
+        console.error("Invalid type: " + type)
+      }
+    }
+
+    const revealClozeClicked = function(ev) {
+      let elem = ev.currentTarget
+      if (!ev.altKey && (revealNextClozeMode !== "word")) {
+        revealCloze(elem)
+      } else {
+        revealClozeWord(elem)
+      }
+      ev.stopPropagation()
+      ev.preventDefault()
+    }
+
+    window.revealNextCloze = function() {
+      revealNextClozeOf(revealNextClozeMode)
+    }
+
+    window.toggleAllCloze = function() {
+      let elems = document.querySelectorAll(".cloze-hidden")
+      if(elems.length > 0) {
+        for (const elem of elems) {
+          const cloze = clozeElOfClozeHidden(elem)
+          revealCloze(cloze)
+        }
+      } else {
+        hideAllCloze(initial=false)
+      }
+    }
+
+    const clozeElOfClozeHidden = (cloze) => {
+      while (!cloze.classList.contains("cloze")) {
+        cloze = cloze.parentElement;
+      }
+      return cloze;
+    }
+
+    const maybeRevealExtraField = () => {
+      let elems = document.querySelectorAll(".cloze-hidden")
+      if (elems.length == 0) {
+        const extra = document.getElementById("extra")
+        if (extra) {
+          extra.classList.remove("hidden")
+        }
+        const qaSection = document.getElementById("umeboshi-qa-section")
+        if (qaSection) {
+          qaSection.classList.remove("hidden")
+        }
+        const llmSection = document.getElementById("umeboshi-llm-section")
+        if (llmSection) {
+          llmSection.classList.remove("hidden")
+        }
+        // Also reveal autoReveal fields
+        for (const [field, autoReveal] of Object.entries(ButtonAutoReveal)) {
+          const container = document.querySelector(`[data-name="${field}"]`)
+          if (container) {
+            const tag = `autoopen::${field.toLowerCase().replace(' ', '_')}`
+            if (autoReveal || (globalThis.tagList && globalThis.tagList.includes(tag))) {
+              const link = container.getElementsByTagName("a")[0]
+              const button = container.getElementsByTagName("button")[0]
+              const hint = container.getElementsByTagName("div")[0]
+              button.classList.add("expanded-button")
+              hint.style.display = "block"
+              link.style.display = "none"
+            }
+          }
+        }
+
+        // Timing Dot表示判定（各clozeごとのめくり間隔で評価）
+        if (window.__timingRevealIntervals.length > 0) {
+          var easySec = 5, hardSec = 10;
+          try {
+            var _sData = UmeboshiStorage.load();
+            if (_sData && _sData.ui) {
+              easySec = _sData.ui.easySecond || 5;
+              hardSec = _sData.ui.hardSecond || 10;
+            }
+          } catch (e) {}
+
+          var allEasy = true;
+          var anyHard = false;
+          for (var dj = 0; dj < window.__timingRevealIntervals.length; dj++) {
+            var sec = window.__timingRevealIntervals[dj] / 1000;
+            if (sec > easySec) allEasy = false;
+            if (sec >= hardSec) anyHard = true;
+          }
+
+          var dot = document.getElementById('umeboshi-timing-dot');
+          if (dot) {
+            dot.className = '';
+            if (allEasy) {
+              dot.classList.add('timing-easy');
+            } else if (anyHard) {
+              dot.classList.add('timing-hard');
+            } else {
+              dot.classList.add('timing-medium');
+            }
+            dot.style.display = 'block';
+          }
+        }
+      }
+    }
+
+    /**
+     * mode: 'beforeFirstSpace' or 'beforeFirstChar'
+     * Return `true` if it exists and setEnd() was called, otherwise `false`
+     */
+    const setRangeEnd = function(range, node, mode) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const regex = mode === 'beforeFirstSpace' ? /\s/ : /\S/
+        const match = node.textContent.match(regex)
+        if (match) {
+          if (match.index === 0) {
+            while (node.previousSibling === null) {
+              node = node.parentElement
+            }
+            range.setEndBefore(node)
+          } else {
+            range.setEnd(node, match.index);
+          }
+          return true;
+        } else {
+          return false;
+        }
+      } else if (mode === 'beforeFirstChar' && isCharNode(node)) {
+        range.setEndBefore(node)
+        return true
+      } else if (!ignoreSpaceInNode(node)) {
+        for (const child of node.childNodes) {
+          if (setRangeEnd(range, child, mode)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    const ignoreSpaceInNode = function (node) {
+      return node.tagName === "MJX-ASSISTIVE-MML"
+    }
+
+    const isCharNode = function(node) {
+      return ["IMG", "MJX-CONTAINER"].includes(node.tagName)
+    }
+
+    hideAllCloze(initial=true)
+    window.__timingLastRevealTime = Date.now();
+
+    const toggleAllButton = document.getElementById("button-toggle-all")
+    const revealNextButton = document.getElementById("button-reveal-next")
+    toggleAllButton.title = `Shortcut: ${window.toggleAllShortcut}`;
+    revealNextButton.title = `Shortcut: ${window.revealNextShortcut}`;
+    let isShowNextShortcut = shortcutMatcher(window.revealNextShortcut)
+    let isShowWordShortcut = shortcutMatcher(window.revealNextWordShortcut)
+    let isToggleAllShortcut = shortcutMatcher(window.toggleAllShortcut)
+    ankingAddEventListener("keydown", (ev) => {
+      let next = isShowNextShortcut(ev)
+      let word = isShowWordShortcut(ev)
+      let all = isToggleAllShortcut(ev)
+      if (next) {
+        revealNextClozeOf("cloze")
+      } else if (word) {
+        revealNextClozeOf("word")
+      } else if (all) {
+        toggleAllCloze()
+      } else {
+        return;
+      }
+      ev.stopPropagation()
+      ev.preventDefault()
+    });
+  })()
+</script>

@@ -1,0 +1,786 @@
+<style>
+  /* ~~~~~~~~~ SETTINGS MODAL (分離元: Styling.css) ~~~~~~~~~ */
+  #umeboshi-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #umeboshi-modal-overlay.active {
+    display: flex;
+  }
+
+  #umeboshi-modal {
+    background-color: #2a2a2a;
+    border: 1px solid #555;
+    border-radius: 1rem;
+    padding: 0.714rem;
+    max-width: 23rem;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #eee;
+    font-size: 1rem;
+  }
+
+  #umeboshi-modal h3 {
+    margin: .6rem 0rem;
+    font-size: 1.2rem;
+    color: #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: none;
+  }
+
+  #umeboshi-modal-close {
+    cursor: pointer;
+    font-size: 1rem;
+    color: #888;
+    background: none;
+    border: none;
+    padding: 0rem;
+    margin: .6rem;
+  }
+
+  #umeboshi-modal-close:hover {
+    color: #fff;
+  }
+
+  .umeboshi-modal-group {
+    margin-bottom: 0.429rem;
+  }
+
+  .umeboshi-modal-group label {
+    display: block;
+    margin-bottom: 0.143rem;
+    color: #aaa;
+    font-size: 0.8rem;
+  }
+
+  .umeboshi-modal-group input[type="number"],
+  .umeboshi-modal-group input[type="text"],
+  .umeboshi-modal-group input[type="password"],
+  .umeboshi-modal-group select {
+    width: 100%;
+    padding: 0.214rem 0.286rem;
+    border: 0.036rem solid #555;
+    border-radius: 0.143rem;
+    background-color: #333;
+    color: #ddd;
+    font-size: 0.8rem;
+    box-sizing: border-box;
+  }
+
+  .umeboshi-modal-group input:focus,
+  .umeboshi-modal-group select:focus {
+    outline: none;
+    border-color: #4297F9;
+  }
+
+  .umeboshi-modal-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.357rem;
+  }
+
+  .umeboshi-modal-toggle span {
+    color: #aaa;
+  }
+
+  #umeboshi-modal-save {
+    background-color: #196728;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 0.536rem;
+  }
+
+  #umeboshi-modal-save:hover {
+    background-color: #269539;
+  }
+
+  #umeboshi-modal-sync {
+    width: 100%;
+    padding: 0.286rem;
+    background-color: #4297F9;
+    color: white;
+    border: none;
+    border-radius: 0.214rem;
+    font-size: 0.65rem;
+    cursor: pointer;
+    margin-top: 0.286rem;
+  }
+
+  #umeboshi-modal-sync:hover {
+    background-color: #3a88e0;
+  }
+
+  #umeboshi-modal-cancel {
+    cursor: pointer;
+    margin: 0.536rem;
+    background-color: transparent;
+    color: #888;
+    border: 1px solid #555;
+  }
+
+  #umeboshi-modal-cancel:hover {
+    color: #ddd;
+    border-color: #888;
+  }
+</style>
+
+<script>
+  // ##############  UMEBOSHI SETTINGS MODAL (v2 - ClaudeFlare)  ##############
+  // 設定モーダル、歯車アイコン、同期ボタンのUIモジュール
+
+  var UmeboshiSettings = (function() {
+
+    // === 歯車アイコンのHTMLを生成 ===
+    function buildGearIcon() {
+      return '<div id="umeboshi-gear" onclick="UmeboshiSettings.openModal()" title="Settings">⚙️</div>';
+    }
+
+    // === 設定モーダルのHTMLを生成 ===
+    function buildModal() {
+      return '\
+    <div id="umeboshi-modal-overlay" onclick="UmeboshiSettings.closeModal(event)">\
+      <div id="umeboshi-modal" onclick="event.stopPropagation()">\
+        <h3>\
+          ⚙ Settings\
+          <button id="umeboshi-modal-close" onclick="UmeboshiSettings.closeModal()">✕</button>\
+        </h3>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>ClaudeFlare URL</label>\
+          <input type="text" id="umeboshi-set-claudeflareUrl" placeholder="https://...">\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>ClaudeFlare Token</label>\
+          <div style="display:flex;gap:0.143rem;align-items:center">\
+            <input type="password" id="umeboshi-set-claudeflareToken" placeholder="cf_..." style="flex:1">\
+            <button onclick="UmeboshiSettings.toggleTokenVisibility()" title="Show/Hide" style="padding:0.214rem 0.286rem;background:#444;border:0.036rem solid #555;border-radius:0.143rem;color:#ddd;cursor:pointer">👁</button>\
+            <button onclick="UmeboshiSettings.copyToken()" title="Copy" style="padding:0.214rem 0.286rem;background:#444;border:0.036rem solid #555;border-radius:0.143rem;color:#ddd;cursor:pointer">📋</button>\
+          </div>\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Invite code</label>\
+          <div style="display:flex;gap:0.286rem;align-items:center">\
+            <input type="text" id="umeboshi-set-inviteCode" placeholder="Invite code を入力 (管理者に発行してもらってください)" style="flex:1">\
+            <button id="umeboshi-register-btn" onclick="UmeboshiSettings.doRegister()" style="white-space:nowrap;">Register</button>\
+          </div>\
+        </div>\
+        \
+        <hr style="border-color:#444;margin:0.536rem 0">\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Font Size:</label>\
+          <div style="display:flex;gap:0.286rem;align-items:center">\
+            <input type="number" id="umeboshi-set-fontSize" min="16" max="36" step="1" style="width:3.5rem">\
+            <span style="color:#aaa;font-size:0.85rem">px</span>\
+          </div>\
+        </div>\
+        \
+        \
+        <div class="umeboshi-modal-toggle">\
+          <span>Countdown</span>\
+          <label class="umeboshi-switch">\
+            <input type="checkbox" id="umeboshi-set-countdownEnabled">\
+            <span class="umeboshi-switch-slider"></span>\
+          </label>\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Brain Rest Sec:</label>\
+          <div style="display:flex;gap:0.286rem;align-items:center">\
+            <input type="number" id="umeboshi-set-countdownBrainRestSec" min="1" max="10" step="1" style="width:3.5rem">\
+            <span style="color:#aaa;font-size:0.85rem">s</span>\
+          </div>\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Ruby Delay Sec:</label>\
+          <div style="display:flex;gap:0.286rem;align-items:center">\
+            <input type="number" id="umeboshi-set-rubyDelaySec" min="0" max="30" step="1" style="width:3.5rem">\
+            <span style="color:#aaa;font-size:0.85rem">s</span>\
+          </div>\
+        </div>\
+        \
+        <div class="umeboshi-modal-toggle">\
+          <span>Language (EN/JP)</span>\
+          <label class="umeboshi-switch">\
+            <input type="checkbox" id="umeboshi-set-rubyLang">\
+            <span class="umeboshi-switch-slider"></span>\
+          </label>\
+        </div>\
+        \
+        \
+        <div class="umeboshi-modal-toggle">\
+          <span>LLM Section</span>\
+          <label class="umeboshi-switch">\
+            <input type="checkbox" id="umeboshi-set-llmEnabled">\
+            <span class="umeboshi-switch-slider"></span>\
+          </label>\
+        </div>\
+        \
+        <div class="umeboshi-modal-toggle">\
+          <span>TTS (Cloze Read Aloud)</span>\
+          <label class="umeboshi-switch">\
+            <input type="checkbox" id="umeboshi-set-ttsEnabled">\
+            <span class="umeboshi-switch-slider"></span>\
+          </label>\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Google TTS API Key</label>\
+          <input type="password" id="umeboshi-set-ttsApiKey" placeholder="AIzaSy...">\
+          <small style="color:#888;font-size:0.5rem">未設定 → speechSynthesisで再生</small>\
+        </div>\
+        \
+        <div class="umeboshi-modal-toggle">\
+          <span>Auto Flip</span>\
+          <label class="umeboshi-switch">\
+            <input type="checkbox" id="umeboshi-set-autoFlip">\
+            <span class="umeboshi-switch-slider"></span>\
+          </label>\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Easy Second (青〇):</label>\
+          <div style="display:flex;gap:0.286rem;align-items:center">\
+            <input type="number" id="umeboshi-set-easySecond" min="1" max="10" step="1" style="width:3.5rem">\
+            <span style="color:#aaa;font-size:0.85rem">s</span>\
+          </div>\
+        </div>\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>Hard Second (オレンジ〇):</label>\
+          <div style="display:flex;gap:0.286rem;align-items:center">\
+            <input type="number" id="umeboshi-set-hardSecond" min="5" max="30" step="1" style="width:3.5rem">\
+            <span style="color:#aaa;font-size:0.85rem">s</span>\
+          </div>\
+        </div>\
+        \
+        <hr style="border-color:#444;margin:0.536rem 0">\
+        <div id="umeboshi-hint-toggles-container">\
+          <label style="color:#ccc; font-size:0.9rem; font-weight: bold; display:block;margin-bottom:0.286rem">Hint Auto-Reveal</label>\
+        </div>\
+        \
+        <hr style="border-color:#444;margin:0.536rem 0">\
+        \
+        <div class="umeboshi-modal-group">\
+          <label>LLM API Usage</label>\
+          <button id="umeboshi-get-usage-btn" onclick="UmeboshiSettings.fetchUsage()">Get Usage</button>\
+          <div id="umeboshi-usage-display" style="display:none">\
+            <div style="margin-bottom:0.286rem">\
+              <div style="display:flex;justify-content:space-between;margin-bottom:0.143rem">\
+                <span>Tokens: <span id="usage-tokens-text">-</span></span>\
+                <span id="usage-tokens-percent">-</span>\
+              </div>\
+              <div style="background:#333;border-radius:0.143rem;height:0.429rem;overflow:hidden">\
+                <div id="usage-tokens-bar" style="height:100%;border-radius:0.143rem;transition:width 0.3s"></div>\
+              </div>\
+              <div style="display:flex;justify-content:space-between;font-size:0.5rem;color:#888;margin-top:0.071rem">\
+                <span>Input: <span id="usage-input">-</span></span>\
+                <span>Output: <span id="usage-output">-</span></span>\
+              </div>\
+            </div>\
+            <div style="margin-bottom:0.286rem">\
+              <span>Requests: <span id="usage-requests">-</span></span>\
+            </div>\
+            <div style="font-size:0.5rem;color:#888">\
+              Reset: <span id="usage-reset">-</span>\
+            </div>\
+          </div>\
+        </div>\
+        \
+        <hr style="border-color:#444;margin:0.536rem 0">\
+        \
+        <button id="umeboshi-sync-pull" onclick="UmeboshiSettings.doPull()">Pull from Cloud ↩</button>\
+        <button id="umeboshi-sync-push" onclick="UmeboshiSettings.doPush()">Push to Cloud ↪</button>\
+        <div style="font-size:0.5rem;color:#888;margin-bottom:0.286rem">💡 Settings take full effect after "Save Local" + card refresh.</div>\
+        <button id="umeboshi-modal-save" onclick="UmeboshiSettings.saveLocal()">Save Local 💾</button>\
+        <button id="umeboshi-modal-cancel" onclick="UmeboshiSettings.closeModal()">Cancel</button>\
+      </div>\
+    </div>';
+    }
+
+    // === 現在の設定在の設定値をモーダルフォームに読み込み ===
+    function loadFormValues() {
+      var data = UmeboshiStorage.load();
+      if (!data) return;
+
+      // 値を設定するヘルパー
+      var setVal = function(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.value = value || '';
+      };
+      // チェックボックスを設定するヘルパー
+      var setChecked = function(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.checked = !!value;
+      };
+
+      // 各フィールドに現在値を反映
+      setVal('umeboshi-set-claudeflareUrl', data.claudeflareUrl);
+      setVal('umeboshi-set-claudeflareToken', data.claudeflareToken);
+      setVal('umeboshi-set-fontSize', data.ui.fontSize);
+      setChecked('umeboshi-set-countdownEnabled', data.ui.countdownEnabled);
+      setVal('umeboshi-set-countdownBrainRestSec', data.ui.countdownBrainRestSec);
+      setVal('umeboshi-set-rubyDelaySec', data.ui.rubyDelaySec);
+      setChecked('umeboshi-set-rubyLang', data.ui.rubyLang === 'ja');
+      setChecked('umeboshi-set-llmEnabled', data.ui.llmEnabled);
+      setChecked('umeboshi-set-ttsEnabled', data.ui.ttsEnabled !== false);
+      setVal('umeboshi-set-ttsApiKey', data.tts ? (data.tts.googleApiKey || '') : '');
+      setChecked('umeboshi-set-autoFlip', data.ui.autoFlip);
+      setVal('umeboshi-set-easySecond', data.ui.easySecond);
+      setVal('umeboshi-set-hardSecond', data.ui.hardSecond);
+
+      // Hint自動展開トグル読み込み
+      var hintCheckboxes = document.querySelectorAll('#umeboshi-hint-toggles-container input[type="checkbox"]');
+      var savedHints = data.hints.autoRevealHints || {};
+      for (var hi = 0; hi < hintCheckboxes.length; hi++) {
+        var field = hintCheckboxes[hi].getAttribute('data-hint-field');
+        if (field) {
+          hintCheckboxes[hi].checked = (savedHints[field] !== undefined) ? savedHints[field] : !!window.ButtonAutoReveal[field];
+        }
+      }
+    }
+
+    // === フォームの値をlocalStorageに保存 ===
+    function saveFormValues() {
+      var getVal = function(id) {
+        var el = document.getElementById(id);
+        return el ? el.value : '';
+      };
+      var getChecked = function(id) {
+        var el = document.getElementById(id);
+        return el ? el.checked : false;
+      };
+
+      // 各設定値を保存
+      UmeboshiStorage.set('claudeflareUrl', getVal('umeboshi-set-claudeflareUrl'));
+      UmeboshiStorage.set('claudeflareToken', getVal('umeboshi-set-claudeflareToken'));
+      UmeboshiStorage.set('ui.fontSize', parseInt(getVal('umeboshi-set-fontSize')) || 28);
+      UmeboshiStorage.set('ui.countdownEnabled', getChecked('umeboshi-set-countdownEnabled'));
+      UmeboshiStorage.set('ui.countdownBrainRestSec', parseInt(getVal('umeboshi-set-countdownBrainRestSec')) || 3);
+      UmeboshiStorage.set('ui.rubyDelaySec', parseInt(getVal('umeboshi-set-rubyDelaySec')) || 0);
+      UmeboshiStorage.set('ui.rubyLang', getChecked('umeboshi-set-rubyLang') ? 'ja' : 'en');
+      UmeboshiStorage.set('ui.llmEnabled', getChecked('umeboshi-set-llmEnabled'));
+      UmeboshiStorage.set('ui.ttsEnabled', getChecked('umeboshi-set-ttsEnabled'));
+      UmeboshiStorage.set('tts.googleApiKey', getVal('umeboshi-set-ttsApiKey'));
+      UmeboshiStorage.set('ui.autoFlip', getChecked('umeboshi-set-autoFlip'));
+      UmeboshiStorage.set('ui.easySecond', parseInt(getVal('umeboshi-set-easySecond')) || 5);
+      UmeboshiStorage.set('ui.hardSecond', parseInt(getVal('umeboshi-set-hardSecond')) || 10);
+
+      // Hint自動展開トグル保存
+      var hintCheckboxes = document.querySelectorAll('#umeboshi-hint-toggles-container input[type="checkbox"]');
+      var hintSettings = {};
+      for (var hi = 0; hi < hintCheckboxes.length; hi++) {
+        var field = hintCheckboxes[hi].getAttribute('data-hint-field');
+        if (field) hintSettings[field] = hintCheckboxes[hi].checked;
+      }
+      UmeboshiStorage.set('hints.autoRevealHints', hintSettings);
+    }
+
+    // === UI設定をカードに適用 ===
+    function applyUISettings() {
+      var data = UmeboshiStorage.load();
+      if (!data) return;
+
+      // フォントサイズをhtml要素に設定
+      var htmlEl = document.documentElement;
+      if (htmlEl && data.ui.fontSize) {
+        htmlEl.style.fontSize = data.ui.fontSize + 'px';
+      }
+
+      // LLMセクションの表示/非表示
+      var llmEl = document.getElementById('umeboshi-llm-section');
+      if (llmEl) {
+        llmEl.style.display = (data.ui.llmEnabled === false) ? 'none' : 'block';
+      }
+
+      // autoFlip設定をグローバル変数に反映
+      window.autoflip = data.ui.autoFlip || false;
+
+    }
+
+    // === モーダルを開く ===
+    function openModal() {
+      var overlay = document.getElementById('umeboshi-modal-overlay');
+      if (overlay) {
+        loadFormValues(); // 現在値をフォームに読み込み
+        overlay.classList.add('active');
+      }
+    }
+
+    // === モーダルを閉じる（オーバーレイクリックで閉じる場合はevent.targetを確認） ===
+    function closeModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      var overlay = document.getElementById('umeboshi-modal-overlay');
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
+    }
+
+    // === ローカルのみ保存 ===
+    async function saveLocal() {
+      var saveBtn = document.getElementById('umeboshi-modal-save');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = 'Saving...';
+
+      try {
+        saveFormValues(); // フォーム値を保存
+        saveBtn.innerHTML = 'Saved ✓';
+        // リロードして設定を全適用
+        setTimeout(function() {
+          location.reload();
+        }, 500);
+      } catch (e) {
+        alert('保存に失敗しました: ' + e.message);
+        saveBtn.innerHTML = 'Save Local 💾';
+        saveBtn.disabled = false;
+      }
+    }
+
+    // === クラウドから設定をプル ===
+    async function doPull() {
+      var pullBtn = document.getElementById('umeboshi-sync-pull');
+      pullBtn.disabled = true;
+      pullBtn.innerHTML = 'Pulling...';
+
+      try {
+        await UmeboshiSync.pullFromCloud();
+        loadFormValues(); // プル後の値をフォームに反映
+        applyUISettings(); // UIに適用
+        pullBtn.innerHTML = 'Pull from Cloud ↩';
+      } catch (e) {
+        UmeboshiSync.showSyncStatus('Pull failed: ' + e.message, 'error');
+        pullBtn.innerHTML = 'Pull from Cloud ↩';
+      } finally {
+        pullBtn.disabled = false;
+      }
+    }
+
+    // === 設定をクラウドにプッシュ ===
+    async function doPush() {
+      var pushBtn = document.getElementById('umeboshi-sync-push');
+      pushBtn.disabled = true;
+      pushBtn.innerHTML = 'Pushing...';
+
+      try {
+        saveFormValues(); // フォーム値を保存
+        applyUISettings(); // UIに適用
+        await UmeboshiSync.pushToCloud();
+        pushBtn.innerHTML = 'Push to Cloud ↪';
+      } catch (e) {
+        UmeboshiSync.showSyncStatus('Push failed: ' + e.message, 'error');
+        pushBtn.innerHTML = 'Push to Cloud ↪';
+      } finally {
+        pushBtn.disabled = false;
+      }
+    }
+
+    // === 招待コードで登録 ===
+    async function doRegister() {
+      var regBtn = document.getElementById('umeboshi-register-btn');
+      var inviteCodeInput = document.getElementById('umeboshi-set-inviteCode');
+      var inviteCode = inviteCodeInput ? inviteCodeInput.value.trim() : '';
+
+      if (!inviteCode) {
+        alert('招待コードを入力してください。');
+        return;
+      }
+
+      // フォームからURLを取得（ユーザーが入力したばかりの可能性）
+      var cloudUrl = (document.getElementById('umeboshi-set-claudeflareUrl') || {}).value || '';
+      if (!cloudUrl) {
+        alert('ClaudeFlare URLを先に入力してください。');
+        return;
+      }
+
+      regBtn.disabled = true;
+      regBtn.innerHTML = '...';
+
+      try {
+        var url = cloudUrl.replace(/\/+$/, '') + '/api/auth/register';
+
+        // 登録リクエスト送信
+        var res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            inviteCode: inviteCode,
+            userId: ''
+          })
+        });
+
+        var text = await res.text();
+        var data;
+        try {
+          data = JSON.parse(text);
+        } catch (parseErr) {
+          alert('サーバーエラー: 応答がJSONではありません。\n' + text.substring(0, 200));
+          regBtn.innerHTML = 'Register';
+          regBtn.disabled = false;
+          return;
+        }
+
+        // 登録失敗時のエラー表示
+        if (!res.ok || !data.success) {
+          alert('登録に失敗しました: ' + (data.error || 'Unknown error'));
+          regBtn.innerHTML = 'Register';
+          regBtn.disabled = false;
+          return;
+        }
+
+        // トークンとURLを保存
+        UmeboshiStorage.set('claudeflareUrl', cloudUrl);
+        UmeboshiStorage.set('claudeflareToken', data.data.token);
+
+        // フォームを更新
+        var tokenInput = document.getElementById('umeboshi-set-claudeflareToken');
+        if (tokenInput) tokenInput.value = data.data.token;
+        if (inviteCodeInput) inviteCodeInput.value = '';
+
+        alert('登録が完了しました！Welcome to Umeboshi Kaname 🎉');
+        regBtn.innerHTML = 'Register';
+        regBtn.disabled = false;
+      } catch (e) {
+        alert('ネットワークエラー: ' + e.message + '\nインターネット接続を確認してください。');
+        regBtn.innerHTML = 'Register';
+        regBtn.disabled = false;
+      }
+    }
+
+    // === Hint自動展開トグル動的生成 ===
+    function buildHintToggles() {
+      var container = document.getElementById('umeboshi-hint-toggles-container');
+      if (!container) return;
+
+      // 既存の動的トグルを削除（静的ラベルは保持）
+      var existingToggles = container.querySelectorAll('.umeboshi-modal-toggle');
+      for (var ri = 0; ri < existingToggles.length; ri++) {
+        existingToggles[ri].remove();
+      }
+
+      var hintBtns = document.querySelectorAll('.hintBtn[data-name]');
+      var savedHints = {};
+      try {
+        savedHints = UmeboshiStorage.get('hints.autoRevealHints') || {};
+      } catch (e) {}
+
+      for (var i = 0; i < hintBtns.length; i++) {
+        var fieldName = hintBtns[i].getAttribute('data-name');
+        var toggleId = 'umeboshi-hint-' + fieldName.replace(/\s+/g, '-');
+
+        var toggleDiv = document.createElement('div');
+        toggleDiv.className = 'umeboshi-modal-toggle';
+        toggleDiv.innerHTML = '<span>' + fieldName + '</span>' +
+          '<label class="umeboshi-switch">' +
+          '<input type="checkbox" id="' + toggleId + '" data-hint-field="' + fieldName + '">' +
+          '<span class="umeboshi-switch-slider"></span></label>';
+        container.appendChild(toggleDiv);
+
+        var checkbox = document.getElementById(toggleId);
+        if (checkbox) {
+          var savedVal = savedHints[fieldName];
+          checkbox.checked = (savedVal !== undefined) ? savedVal : !!window.ButtonAutoReveal[fieldName];
+        }
+      }
+    }
+
+    // === 初期化: 歯車アイコンとモーダルをDOMに挿入 ===
+    function init() {
+      // 歯車アイコンを追加（重複チェック）
+      if (!document.getElementById('umeboshi-gear')) {
+        var gearDiv = document.createElement('div');
+        gearDiv.innerHTML = buildGearIcon();
+        document.body.appendChild(gearDiv.firstChild);
+      }
+
+      // 設定モーダルを追加（既存があれば置き換え）
+      var existingModal = document.getElementById('umeboshi-modal-overlay');
+      if (existingModal) existingModal.remove();
+      var modalDiv = document.createElement('div');
+      modalDiv.innerHTML = buildModal();
+      while (modalDiv.firstChild) {
+        document.body.appendChild(modalDiv.firstChild);
+      }
+
+      // デバッグボタンを追加（重複チェック）
+      if (!document.getElementById('umeboshi-debug-btn')) {
+        var debugBtn = document.createElement('div');
+        debugBtn.id = 'umeboshi-debug-btn';
+        debugBtn.innerHTML = '🐛';
+        debugBtn.title = 'Debug: Show localStorage';
+        debugBtn.onclick = function() {
+          showDebug();
+        };
+        document.body.appendChild(debugBtn);
+      }
+
+      // UI設定を適用
+      applyUISettings();
+
+      // Hint自動展開トグル動的生成
+      buildHintToggles();
+    }
+
+    // === デバッグ情報を表示 ===
+    function showDebug() {
+      var data = UmeboshiStorage.load();
+      var debugInfo = '=== Umeboshi Debug ===\n\n';
+      debugInfo += 'localStorage key: "' + UmeboshiStorage.STORAGE_KEY + '"\n\n';
+      debugInfo += 'Raw localStorage:\n' + (localStorage.getItem(UmeboshiStorage.STORAGE_KEY) || '(empty)') + '\n\n';
+      debugInfo += 'Parsed data:\n' + JSON.stringify(data, null, 2);
+
+      // 既存のデバッグオーバーレイがあればトグルで閉じる
+      var existing = document.getElementById('umeboshi-debug-overlay');
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+      // デバッグオーバーレイを作成
+      var overlay = document.createElement('div');
+      overlay.id = 'umeboshi-debug-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;overflow:auto;padding:0.714rem;box-sizing:border-box;';
+
+      var pre = document.createElement('pre');
+      pre.style.cssText = 'color:#0f0;font-size:0.429rem;white-space:pre-wrap;word-break:break-all;margin:0;';
+      pre.textContent = debugInfo;
+
+      var closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕ Close';
+      closeBtn.style.cssText = 'position:fixed;top:0.357rem;right:0.357rem;padding:0.286rem 0.571rem;background:#333;color:#fff;border:0.036rem solid #555;border-radius:0.143rem;cursor:pointer;z-index:10000;font-size:0.5rem;';
+      closeBtn.onclick = function() {
+        overlay.remove();
+      };
+
+      overlay.appendChild(closeBtn);
+      overlay.appendChild(pre);
+      document.body.appendChild(overlay);
+    }
+
+    // === Token表示/非表示トグル ===
+    function toggleTokenVisibility() {
+      var el = document.getElementById('umeboshi-set-claudeflareToken');
+      if (el) el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    // === Tokenをクリップボードにコピー ===
+    function copyToken() {
+      var el = document.getElementById('umeboshi-set-claudeflareToken');
+      if (el && el.value) {
+        navigator.clipboard.writeText(el.value).then(function() {
+          var btn = el.parentElement.querySelector('button[title="Copy"]');
+          if (btn) {
+            btn.textContent = '✓';
+            setTimeout(function() {
+              btn.textContent = '📋';
+            }, 1500);
+          }
+        });
+      }
+    }
+
+    // === API使用量取得 ===
+    async function fetchUsage() {
+      var btn = document.getElementById('umeboshi-get-usage-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+      }
+      try {
+        var url = (document.getElementById('umeboshi-set-claudeflareUrl') || {}).value || '';
+        var token = (document.getElementById('umeboshi-set-claudeflareToken') || {}).value || '';
+        if (!url || !token) {
+          alert('URL and Token are required');
+          return;
+        }
+        var res = await fetch(url.replace(/\/+$/, '') + '/api/usage', {
+          method: 'GET',
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+        var data = await res.json();
+        if (!data.success) {
+          alert('Failed: ' + data.error);
+          return;
+        }
+        displayUsage(data.data);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Get Usage';
+        }
+      }
+    }
+
+    // === 使用量表示 ===
+    function displayUsage(data) {
+      var display = document.getElementById('umeboshi-usage-display');
+      if (display) display.style.display = 'block';
+      var total = data.tokenUsage.input + data.tokenUsage.output;
+      var max = data.limits.maxMonthlyTokens;
+      var percent = Math.round((total / max) * 100);
+      var tokensText = document.getElementById('usage-tokens-text');
+      var tokensPercent = document.getElementById('usage-tokens-percent');
+      var inputEl = document.getElementById('usage-input');
+      var outputEl = document.getElementById('usage-output');
+      var requestsEl = document.getElementById('usage-requests');
+      var resetEl = document.getElementById('usage-reset');
+      var bar = document.getElementById('usage-tokens-bar');
+      if (tokensText) tokensText.textContent = total.toLocaleString() + ' / ' + max.toLocaleString();
+      if (tokensPercent) tokensPercent.textContent = percent + '%';
+      if (inputEl) inputEl.textContent = data.tokenUsage.input.toLocaleString();
+      if (outputEl) outputEl.textContent = data.tokenUsage.output.toLocaleString();
+      if (requestsEl) requestsEl.textContent = data.requestCount;
+      if (resetEl) resetEl.textContent = data.resetAt ? new Date(data.resetAt).toLocaleDateString() : '-';
+      if (bar) {
+        bar.style.width = Math.min(percent, 100) + '%';
+        bar.style.backgroundColor = percent < 50 ? '#2ea043' : percent < 80 ? '#f59e0b' : '#ef4444';
+      }
+    }
+
+    // === 公開API ===
+    return {
+      init: init,
+      openModal: openModal,
+      closeModal: closeModal,
+      saveLocal: saveLocal,
+      doPull: doPull,
+      doPush: doPush,
+      doRegister: doRegister,
+      applyUISettings: applyUISettings,
+      showDebug: showDebug,
+      toggleTokenVisibility: toggleTokenVisibility,
+      copyToken: copyToken,
+      fetchUsage: fetchUsage
+    };
+  })();
+
+  // === 自動初期化（2秒遅延でDOM準備完了を待つ） ===
+  setTimeout(function() {
+    try {
+      UmeboshiSettings.init();
+    } catch (e) {
+      console.error('UmeboshiSettings init error:', e);
+    }
+  }, 2000);
+</script>

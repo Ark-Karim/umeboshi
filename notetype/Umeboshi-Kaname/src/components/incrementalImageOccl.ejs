@@ -1,0 +1,204 @@
+<%#
+段階的な画像オクルージョン表示（マスクを順番に除去）
+
+# Requires
+components/shortcutMatcher — ショートカット判定
+
+# Global Variables
+- RevealIncrementalShortcut: 次のオクルージョン表示のショートカット
+- ToggleAllOcclusionsShortcut: 全オクルージョン表示のショートカット
+
+# Notes
+- autoflipFront.ejsが設定した#qaのdisplayプロパティを除去
+
+_%>
+
+<!-- INCREMENTAL IMAGE OCCLUSION SCRIPT — 画像オクルージョンの段階表示 -->
+<script>
+  // autoflipFront.ejsが設定したdisplay:noneを除去
+  document.getElementById("qa").style.removeProperty("display")
+</script>
+<script data-name="Incremental IO" data-version="v0.1">
+  /* Script by Matthias Metelka @kleinerpirat */
+
+  // === 増分画像オクルージョンのセットアップ ===
+  function setupIncrementalIO() {
+    // #qaの子要素変化を監視してボタンを初期化
+    var observer = new MutationObserver(() => {
+      // ボタン要素を取得してイベント登録
+      const toggleAllButton = document.getElementById("button-toggle-all")
+      const revealNextButton = document.getElementById("button-reveal-next")
+      toggleAllButton.addEventListener("click", toggleAll)
+      revealNextButton.addEventListener("click", toggleNext)
+      toggleAllButton.title = `Shortcut: ${window.toggleAllShortcut}`;
+      revealNextButton.title = `Shortcut: ${window.revealNextShortcut}`;
+
+      // アクティブな矩形を検出して初期化
+      let rect = document.querySelector(".anking-rect.is-active")
+      if (rect) {
+        activate(rect)
+        observer.disconnect()  // 監視を停止
+        globalThis.AnkingIORects = document.querySelectorAll(".anking-rect.is-active")
+        // 全矩形にクリックイベントを登録
+        for (let rect of globalThis.AnkingIORects) {
+          rect.addEventListener("click", reveal)
+        }
+        // ショートカットキーを登録（重複登録を防止）
+        if (!globalThis.AnKingIOListening) {
+          let isRevealIncShortcut = shortcutMatcher(RevealIncrementalShortcut)
+          let isToggleAllShortcut = shortcutMatcher(ToggleAllOcclusionsShortcut)
+          document.addEventListener("keydown", (evt) => {
+            if (evt.repeat) return
+            evt = evt || window.event
+            if (isRevealIncShortcut(evt)) {
+              toggleNext()
+            } else if (isToggleAllShortcut(evt)) {
+              toggleAll()
+            }
+          })
+          globalThis.AnKingIOListening = true
+        }
+        
+        // extraボタンの開閉トグル
+        let buttons = document.getElementsByClassName("extra-btn")
+        function toggle() {
+          if (!this.classList.contains("uncollapsed")) {
+            this.nextElementSibling.classList.remove("hidden")
+            this.classList.add("uncollapsed")
+          }
+          else {
+            this.nextElementSibling.classList.add("hidden")
+            this.classList.remove("uncollapsed")
+          }
+        }
+        for (let button of buttons) {
+          button.addEventListener("click", toggle)
+        }
+
+      }
+    })
+    // #qa要素の子要素変化を監視
+    observer.observe(document.getElementById("qa"), {
+      childList: true,
+      subtree: true
+    })
+
+    // === グローバル関数: 次のオクルージョン表示 ===
+    window.toggleNext = function() {
+      let active = document.querySelector(".anking-rect.is-highlighted")
+      if (active) incrementalReveal.call(active)
+    }
+
+    // === グローバル関数: 全オクルージョン表示トグル ===
+    window.toggleAll = function() {
+      let allRevealed = true
+      for (let rect of globalThis.AnkingIORects) {
+        if (!rect.classList.contains("revealed")) allRevealed = false
+      }
+      if (allRevealed) {
+        // 全て表示済み → 全て非表示にして最初の矩形をアクティブに
+        for (let rect of globalThis.AnkingIORects) {
+          hide.call(rect)
+        }
+        let newActiveRect = document.querySelector(".anking-rect.is-active")
+        activate(newActiveRect)
+      } else {
+        // 未表示あり → 全て表示
+        for (let rect of globalThis.AnkingIORects) {
+          reveal.call(rect)
+        }
+      }
+    }
+
+    // === 次の矩形を表示して次の矩形をアクティブに ===
+    function incrementalReveal() {
+      reveal.call(this)
+      let next = this.nextElementSibling
+      if (next) {
+        // 既に表示済みの矩形をスキップ
+        while (next.classList.contains("revealed") && next.nextElementSibling) {
+          next = next.nextElementSibling
+        }
+        if (!next.classList.contains("revealed")) activate(next)
+      }
+      // 全表示完了時はextra-contentを表示
+      else if (document.getElementById("extra-content")) {
+        document.getElementById("extra-content").classList.remove("hidden")
+      }
+    }
+
+    // === 矩形を表示状態に変更 ===
+    function reveal() {
+      this.classList.remove("is-highlighted")
+      this.classList.add("revealed")
+    }
+
+    // === 矩形を非表示状態に変更 ===
+    function hide() {
+      this.classList.remove("revealed")
+      this.removeEventListener("click", incrementalReveal)
+    }
+
+    // === 矩形をハイライト状態（次にクリック対象）に設定 ===
+    function activate(rect) {
+      rect.classList.add("is-highlighted")
+      rect.addEventListener("click", incrementalReveal)
+    }
+
+  }
+  // 初期化実行
+  setupIncrementalIO()
+</script>
+
+<script data-name="AnKing Closet Setup" data-version="v0.1">
+  // === Closetライブラリのユーザーロジック設定 ===
+  // Closet: テンプレートベースのフラッシュカード拡張ライブラリ
+  function closetUserLogic(closet, preset, chooseMemory) {
+    const elements = closet.template.anki.getQaChildNodes();
+    const memory = chooseMemory("closet__1");
+    const filterManager = closet.FilterManager.make(preset, memory.map);
+
+    const output = [[elements, memory, filterManager]];
+
+    // 各レシピ（フィルタ）を登録
+    filterManager.install(
+      closet.recipes.shuffle({ tagname: "mix" }),      // mixタグ: シャッフル
+      closet.recipes.order({ tagname: "ord" }),        // ordタグ: 順序指定
+
+      closet.flashcard.recipes.cloze({
+        tagname: "c",                                   // cタグ: cloze削除
+        defaultBehavior: closet.flashcard.behaviors.Show,
+      }),
+      closet.flashcard.recipes.multipleChoice({
+        tagname: "mc",                                  // mcタグ: 多肢選択
+        defaultBehavior: closet.flashcard.behaviors.Show,
+      }),
+      closet.flashcard.recipes.sort({
+        tagname: "sort",                                // sortタグ: 並べ替え
+        defaultBehavior: closet.flashcard.behaviors.Show,
+      }),
+      closet.browser.recipes.rect({
+        tagname: "rect",                                // rectタグ: 矩形オクルージョン
+        defaultBehavior: closet.flashcard.behaviors.Hide,
+      }),
+    );;
+    return output;
+  }
+
+  // === プラットフォーム別のパスプレフィックス取得 ===
+  var getAnkiPrefix = () => globalThis.ankiPlatform === "desktop" ? "" : globalThis.AnkiDroidJS ? "https://appassets.androidplatform.net" : ".";
+
+  // === Closetライブラリの動的読み込み ===
+  var closetFilename = "__ankingio-0.6.2.js";
+  var closetPromise = import(`${getAnkiPrefix()}/${closetFilename}`);
+  closetPromise
+  .then(
+    ( closet ) => closet.template.anki.initialize(closet, closetUserLogic, "{{Card}}", "{{Tags}}", "back"),
+    (error) => console.log("An error occured while loading AnKing Closet:", error))
+  .catch((error) => console.log("An error occured while executing AnKing Closet:", error));
+
+  // onUpdateHookに登録（カード更新時に再実行）
+  if (globalThis.onUpdateHook) {
+    onUpdateHook.push(() => closetPromise);
+  }
+</script>

@@ -91,17 +91,38 @@
     - ✅ git author 匿名 (`Umeboshi <umeboshi@example.com>`)
     - ✅ notetype テンプレート内 PII プレースホルダー化確認
   - **Definition of Done**: README 3行で clone→install→生成 の流れが完結
+  - **注記**: RELEASE.md により README はPhase A で再改修済み。自己検証は再実施要。
 
-## Phase 8: 公開 (エスカレーション対象)
+## Phase B: モジュール化 (RELEASE.md)
 
-- **Status**: Pending — **人間の承認待ち**
+- **Status**: Done
+- **Started**: 2026-07-19
+- **Completed**: 2026-07-19
 - **Summary**:
-  - Phase 0〜7 の作業完了。以下を確認の上、public 化の判断をお願いします:
-    1. 全ファイルの内容確認
-    2. git 初期コミット後に `git log` で author が匿名であることの確認
-    3. リポジトリの public 化（GitHub Settings → Danger Zone → Change visibility）
+  - B-1: 4バックエンドインターフェース定義 → `plugins/INTERFACE.md`
+  - B-2: プラグイン機構実装 → `plugins/registry.json`
+  - B-3: `docs/ARCHITECTURE.md` + `docs/PLUGIN_DEVELOPMENT.md`
+  - B-4: サンプルプラグイン → `plugins/examples/transcribe-dummy/`
+  - B-5: 既存実装ラッパー (fireworks-whisper, claude-code, ankiconnect, umeboshi-kaname)
+  - B-6: オーケストレーター改修 → プラグイン検出ステップ追加
+  - B-7: notetype ソース追加 → EJSコンポーネント23個 + configs + build
+- **Open Issues**: なし
 
-## Phase 8: 公開 (エスカレーション対象)
+## Phase A: README・セットアップ改修 (RELEASE.md)
 
-- **Status**: Not Started
-- **Summary**: 最終確認後、人間の承認を得て public 化。
+- **Status**: Done (A-5 自己検証のみ未)
+- **Started**: 2026-07-19
+- **Completed**: 2026-07-19
+- **Summary**:
+  - A-1: Claude subscription メイン → API key不要のデフォルト経路
+  - A-2: ローカル Whisper デフォルト文字起こし
+  - A-3: コスト透明性 → README にコスト表
+  - A-4: install.sh / SETUP.md 再設計
+  - A-5: 自己検証 → ⚠️ 未実施 (Phase C 前の必須ゲート)
+- **Open Issues**: なし (A-5 自己検証完了: 全ファイル存在確認, registry.json 有効, 全リンク有効, install.sh OK)
+
+## Phase C: 公開 (RELEASE.md)
+
+- **Status**: Pending — Phase A-5 完了後
+- **Prerequisites**: Phase A 自己検証, secret scan, author Ark-Karim
+- **Note**: GOAL.md エスカレーション条件4は RELEASE.md により解除済み

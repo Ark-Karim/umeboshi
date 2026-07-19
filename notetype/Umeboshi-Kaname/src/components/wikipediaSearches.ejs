@@ -1,0 +1,219 @@
+<%#
+テキスト選択時にWikipedia要約をポップアップ表示
+
+# Components
+components/ankingAddEventListener — イベントリスナー自動片付け
+
+_%>
+<!-- WIKIPEDIA SEARCHES — 選択テキストのWikipedia検索ポップアップ -->
+<div id="popup-container">
+  <button id="close-popup-btn" onclick="closePopup(true)">&times;</button>
+  <a id="open-wiki-btn" href="">&#8618;</a>
+  <div id="tc"></div>
+  <div id="fadebottom_v"></div>
+  <div id="ic"><img id="popup-image"></div>
+</div>
+<style>
+  #tc {
+    color: #222222;
+    position: absolute;
+    top: 16px;
+    margin: 0px;
+    left: 15px;
+    text-decoration: none;
+    height: 320px;
+    overflow: hidden;
+    overflow-y: scroll;
+    white-space: pre-wrap;
+    width: 300px;
+  }
+  
+  #tc p {
+    margin: 0px;
+  }
+  
+  #tc::-webkit-scrollbar {
+    display: none;
+  }
+  
+  #fadebottom_v {
+    height: 30px;
+    width: 300px;
+    background: -webkit-linear-gradient(270deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 1));
+    z-index: 111;
+    position: absolute;
+    bottom: 0px;
+    left: 15px;
+  }
+  
+  #hc {
+    color: #666;
+    font-weight: bold;
+  }
+  
+  #ic {
+    right: 0px;
+    top: 30px;
+    position: absolute;
+  }
+  
+  #ic img {
+    width: 160px;
+    height: auto;
+    object-fit: cover;
+    overflow: hidden;
+  }
+  
+  #popup-image {
+    width: 140px;
+    height: auto;
+  }
+  
+  #popup-container {
+    background: #fff;
+    position: absolute;
+    bottom: 30px;       /* 下端からの距離 */
+    right: 10px;        /* 右端からの距離 */
+    z-index: 110;       /* 他の要素より前面に表示 */
+    -webkit-box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.3), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.3), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+    padding: 0;
+    display: none;
+    font-size: 17px;
+    line-height: 20px;
+    border-radius: 2px;
+    width: 480px;
+    height: 340px;
+    overflow: hidden;
+    font-family: Arial;
+    text-align: left;
+    border: 1px solid #d0d0d0;
+    border-radius: 5px;
+  }
+  
+  #close-popup-btn {
+    position: absolute;
+    top: 1px;
+    right: 5px;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 20px;
+    outline: none;
+    text-align: right;
+    z-index: 112;
+  }
+  
+  #open-wiki-btn {
+    position: absolute;
+    top: 10px;
+    right: 30px;
+    width: 15px;
+    height: 32px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+    color: #222222;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 17px;
+    outline: none;
+    text-align: left;
+    z-index: 112;
+  }
+</style>
+
+<script>
+  // === Wikipedia要約を取得してポップアップに表示 ===
+  function getSummaryFor(word) {
+    // 前後の記号・空白を除去
+    word = word.replace(/^[\.,\/#\!$%\^&\*;:{}=\-_`~() \'\s]+|[\.,\/#\!$%\^&\*;:{}=\-_`~()\'\s]+$/g, "");
+    var pc = document.getElementById("popup-container");
+    var hc = document.getElementById("hc");
+    var tc = document.getElementById("tc");
+    var ic = document.getElementById("ic");
+    var imgelem = document.getElementById("popup-image");
+    imgelem.src = "";
+    var shortsum = "";
+
+    // Wikipedia REST APIで要約を取得
+    fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + word)
+    .then(function (response) { return response.json(); })
+    .then(function (response) {
+      shortsum = response.description;
+      // 曖昧さ回避は短縮表示
+      shortsum = shortsum.replace(/(Disambiguation.*)/g, "Disambiguation");
+      tc.innerHTML = "<span id='hc'>" + capfl(shortsum) + "</span>" + "\n" + response.extract_html + "\n";
+      tc.style.width = "420px";
+      // 要約が存在すればポップアップを表示
+      if (response.extract_html && !response.extract.endsWith("to:")) {
+        pc.style.display = "block";
+        document.getElementById("open-wiki-btn").href = response.content_urls.desktop.page;
+      } else {
+        pc.style.display = "none";
+      }
+      // サムネイルがあれば画像エリアを表示
+      if (!response.thumbnail.source || response.type === "disambiguation") {
+        tc.style.width = "420px";
+      } else {
+        tc.style.width = "300px"; imgelem.src = response.thumbnail.source;
+      }
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+  }
+
+  // === ポップアップを閉じる ===
+  function closePopup(deselectAlso = false) {
+    pcc.style.display = 'none';
+    if (deselectAlso) { clearSelection(); }
+  }
+
+  // === クリックイベント: テキスト選択時にWikipedia検索 ===
+  var pcc = document.getElementById("popup-container");
+  var prevSel = "";  // 前回の選択テキストを保存
+  ankingAddEventListener('click', function () {
+    var currentSelection = getSelectionText();
+    if (currentSelection !== "") { prevSel = currentSelection; }
+    // mustClickW=falseなら選択即表示、trueならwキー待ち
+    if (currentSelection && !mustClickW) {
+      getSummaryFor(currentSelection);
+    } else { closePopup(); }
+  });
+
+  // === wキーでポップアップの開閉をトグル ===
+  ankingAddEventListener('keyup', function (e) {
+    if (e.key == "w") {
+      if (pcc.style.display === "block") { closePopup(); } else { getSummaryFor(prevSel); }
+    }
+  });
+
+  // === 選択テキストを取得 ===
+  function getSelectionText() {
+    var text = "";
+    if (window.getSelection) {
+      text = window.getSelection().toString();
+    } else if (document.selection && document.selection.type != "Control") { text = document.selection.createRange().text; }
+    return text;
+  }
+
+  // === 先頭文字を大文字に変換 ===
+  function capfl(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // === テキスト選択を解除 ===
+  function clearSelection() {
+    if (window.getSelection) { window.getSelection().removeAllRanges(); }
+    else if (document.selection) { document.selection.empty(); }
+  }
+
+  // === カスタマイズ設定 ===
+  // true: wキー押下でポップアップ表示（選択→wキー）
+  // false: テキスト選択だけで自動表示（wキーは開閉トグル）
+  var mustClickW = true;
+</script>

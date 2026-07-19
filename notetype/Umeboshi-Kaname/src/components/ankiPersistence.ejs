@@ -1,0 +1,54 @@
+<!-- Anki Persistence (MIT): Front↔Back間データ保持 (sessionStorage only) -->
+<!-- https://github.com/SimonLammer/anki-persistence -->
+
+<script>
+if (typeof(window.Persistence) === 'undefined') {
+  var _persistenceKey = 'github.com/SimonLammer/anki-persistence/';
+  var _defaultKey = '_default';
+
+  window.Persistence = {
+    clear: function() {
+      for (var i = 0; i < sessionStorage.length; i++) {
+        var k = sessionStorage.key(i);
+        if (k.indexOf(_persistenceKey) == 0) {
+          sessionStorage.removeItem(k);
+          i--;
+        }
+      }
+    },
+    setItem: function(key, value) {
+      if (value == undefined) {
+        value = key;
+        key = _defaultKey;
+      }
+      sessionStorage.setItem(_persistenceKey + key, JSON.stringify(value));
+    },
+    getItem: function(key) {
+      if (key == undefined) {
+        key = _defaultKey;
+      }
+      return JSON.parse(sessionStorage.getItem(_persistenceKey + key));
+    },
+    removeItem: function(key) {
+      if (key == undefined) {
+        key = _defaultKey;
+      }
+      sessionStorage.removeItem(_persistenceKey + key);
+    },
+    getAllKeys: function() {
+      var keys = [];
+      var prefixedKeys = Object.keys(sessionStorage);
+      for (var i = 0; i < prefixedKeys.length; i++) {
+        var k = prefixedKeys[i];
+        if (k.indexOf(_persistenceKey) == 0) {
+          keys.push(k.substring(_persistenceKey.length, k.length));
+        }
+      }
+      return keys.sort();
+    },
+    isAvailable: function() {
+      try { return typeof(window.sessionStorage) === 'object'; } catch(e) { return false; }
+    }
+  };
+}
+</script>

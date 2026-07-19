@@ -29,6 +29,25 @@ description: null
 
 Use the `TaskCreateTool` to create tasks for each of the following steps. (like ### xxx, #### xxxx, #### xxxx, ...)
 
+### Step: プラグイン検出
+
+`plugins/registry.json` を読み込み、アクティブなプラグインを特定する。
+
+```json
+// plugins/registry.json の backends.<type>.active を参照
+```
+
+各バックエンドタイプとスキルの対応:
+
+| バックエンド | アクティブプラグイン | 対応スキル |
+|------------|-------------------|-----------|
+| transcribe | `<active>` | `plugins/transcribe/<active>/SKILL.md` |
+| generate | `<active>` | `plugins/generate/<active>/SKILL.md` |
+| import | `<active>` | `plugins/import/<active>/SKILL.md` |
+
+文字起こしが必要な場合、アクティブな transcribe プラグインの SKILL.md を読み、その指示に従う。
+デフォルト: `transcribe-fireworks-whisper` → `skills/transcribe-fireworks-whisper/SKILL.md` に委譲。
+
 ### Step: 入力の確認
 
 ユーザーが指定したファイルの存在を確認する。未提示の場合は処理を進めず、入力を要求する。サブエージェントへのファイルパスの指示はすべて絶対パスで行う。
@@ -41,7 +60,7 @@ Use the `TaskCreateTool` to create tasks for each of the following steps. (like 
 Glob: <absolute path>/<通常はScript, 例外もあるためユーザーの指定を優先>/<original filename (without extension)>.<extension>
 ```
 
-音声の場合は文字おこしする。テキストファイルを、<absolute path>/script/<original filename (without extension)>.txt に保存する。
+音声の場合は文字おこしする。**アクティブな transcribe プラグインの SKILL.md に従う。** テキストファイルを、<absolute path>/Script/<original filename (without extension)>.txt に保存する。
 
 PDFの場合はテキストに変換する。テキストファイルを、<absolute path>/script/<original filename (without extension)>.txt に保存する。
 

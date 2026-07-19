@@ -1,0 +1,46 @@
+<%# brainRestCountdownScript.ejs — Brain Rest Countdown overlay logic
+   依存: UmeboshiStorage, clozeOneByOneBack.ejs（__umeboshiResetTimingForCountdown）
+   設定値: ui.countdownEnabled (bool), ui.countdownBrainRestSec (number) %>
+<script>
+  (function() {
+    // 有効/無効チェック
+    var enabled = true;
+    try {
+      var _bd = UmeboshiStorage.load();
+      if (_bd && _bd.ui) {
+        enabled = _bd.ui.countdownEnabled !== false;
+      }
+    } catch(e) {}
+    if (!enabled) return;
+
+    // カウント秒数をlocalStorageから取得
+    var sec = 3;
+    try {
+      sec = parseInt(UmeboshiStorage.get('ui.countdownBrainRestSec')) || 3;
+    } catch(e) {}
+    sec = Math.max(1, sec);
+
+    var overlay = document.getElementById('brainrest-overlay');
+    var numberEl = document.getElementById('brainrest-number');
+    if (!overlay || !numberEl) return;
+
+    // オーバーレイ表示開始
+    overlay.style.display = 'flex';
+    var count = sec;
+    numberEl.textContent = count;
+
+    var interval = setInterval(function() {
+      count--;
+      if (count > 0) {
+        numberEl.textContent = count;
+      } else {
+        clearInterval(interval);
+        overlay.style.display = 'none';
+        // タイミング計測をリセット（clozeOneByOneBack が提供）
+        if (typeof window.__umeboshiResetTimingForCountdown === 'function') {
+          window.__umeboshiResetTimingForCountdown();
+        }
+      }
+    }, 1000);
+  })();
+</script>

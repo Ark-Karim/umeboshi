@@ -1,0 +1,168 @@
+<script>
+// ##############  UMEBOSHI LOCAL STORAGE (v2 - ClaudeFlare)  ##############
+// Umeboshi KanameノートタイプのlocalStorage管理モジュール
+
+var UmeboshiStorage = (function() {
+  var STORAGE_KEY = 'umeboshi';     // localStorageのキー名
+  var SCHEMA_VERSION = 2;           // 現在のスキーマバージョン
+
+  // === デフォルトのlocalStorage構造（v2） ===
+  function getDefaults() {
+    return {
+      version: SCHEMA_VERSION,
+      claudeflareToken: '',          // ClaudeFlare API認証トークン
+      claudeflareUrl: 'https://umeboshi-claudeflare.chibahiroaki14.workers.dev',
+      ui: {
+        fontSize: 28,                // フォントサイズ（px）
+        countdownEnabled: true,      // 脳休憩カウントダウン表示
+        llmEnabled: true,            // LLM機能
+        thinkingEnabled: false,      // Thinking表示
+        autoFlip: true,              // 自動めくり（表面スキップ）
+        ttsEnabled: false,           // TTS読み上げ
+        countdownBrainRestSec: 3,    // 脳休憩カウントダウン秒数
+        easySecond: 5,               // タイミングドット: 青〇の秒数閾値
+        hardSecond: 10,              // タイミングドット: オレンジ〇の秒数閾値
+        rubyLang: 'en',              // ルビ表示言語: 'en'=英語デフォルト, 'ja'=日本語デフォルト
+        rubyDelaySec: 0,             // ルビ遅延表示の秒数（0 = 即時表示）
+      },
+      hints: {
+        autoRevealHints: {},         // ヒント自動表示設定
+      },
+      syncedAt: ''                   // 最終同期日時
+    };
+  }
+
+  // === ディープマージユーティリティ ===
+  // ネストされたオブジェクトをマージ（スキーマは固定深度のため非再帰）
+  function deepMerge(target, source) {
+    var result = JSON.parse(JSON.stringify(target));
+    for (var key in source) {
+      if (source.hasOwnProperty(key)) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+            && result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+          Object.assign(result[key], source[key]);
+        } else {
+          result[key] = source[key];
+        }
+      }
+    }
+    return result;
+  }
+
+  // === v1 → v2マイグレーション ===
+  function migrateV1toV2(data) {
+    if (!data) return getDefaults();
+
+    // v1検出: githubTokenまたはllm.providerが存在
+    var isV1 = data.githubToken || (data.llm && data.llm.provider);
+    if (!isV1) return data;
+
+    // v2構造に変換（ui/hintsは既存値をマージ）
+    var migrated = {
+      version: 2,
+      claudeflareToken: '',
+      claudeflareUrl: 'https://umeboshi-claudeflare.chibahiroaki14.workers.dev',
+      ui: deepMerge(getDefaults().ui, data.ui || {}),
+      hints: deepMerge(getDefaults().hints, data.hints || {}),
+      syncedAt: ''
+    };
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      console.log('UmeboshiStorage: Migrated v1 → v2 (ClaudeFlare)');
+    } catch (e) {
+      console.error('UmeboshiStorage: Migration failed', e);
+    }
+
+    return migrated;
+  }
+
+  // === localStorageから読み込み（デフォルト値とマージ） ===
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+
+      // v1データの自動マイグレーション
+      if (parsed.version === 1 || parsed.githubToken || (parsed.llm && parsed.llm.provider)) {
+        parsed = migrateV1toV2(parsed);
+      }
+
+      return deepMerge(getDefaults(), parsed);
+    } catch (e) {
+      console.error('UmeboshiStorage: Failed to load', e);
+      return null;
+    }
+  }
+
+  // === localStorageに保存 ===
+  function save(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.error('UmeboshiStorage: Failed to save', e);
+      return false;
+    }
+  }
+
+  // === ドットパスでネストされた値を取得（例: 'ui.fontSize'） ===
+  function get(path) {
+    var data = load();
+    if (!data) return undefined;
+    var parts = path.split('.');
+    var current = data;
+    for (var i = 0; i < parts.length; i++) {
+      if (current === undefined || current === null) return undefined;
+      current = current[parts[i]];
+    }
+    return current;
+  }
+
+  // === ドットパスでネストされた値を設定 ===
+  function set(path, value) {
+    var data = load() || getDefaults();
+    var parts = path.split('.');
+    var current = data;
+    for (var i = 0; i < parts.length - 1; i++) {
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = value;
+    return save(data);
+  }
+
+  // === 初期化（データがなければデフォルトで作成） ===
+  function init() {
+    var existing = load();
+    if (!existing) {
+      return save(getDefaults());
+    }
+    return true;
+  }
+
+  // === 初期化済みチェック ===
+  function isInitialized() {
+    return load() !== null;
+  }
+
+  // === ClaudeFlareトークン設定済みチェック ===
+  function hasToken() {
+    var data = load();
+    return data && data.claudeflareToken && data.claudeflareToken.length > 0;
+  }
+
+  // === 公開API ===
+  return {
+    load: load,
+    save: save,
+    get: get,
+    set: set,
+    init: init,
+    isInitialized: isInitialized,
+    hasToken: hasToken,
+    getDefaults: getDefaults,
+    STORAGE_KEY: STORAGE_KEY
+  };
+})();
+</script>

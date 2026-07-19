@@ -1,0 +1,1088 @@
+<%# umeboshiLlmChat.ejs — LLM Q&Aチャットインターフェース section パラメータで出力を切り替え: - 'qa' : qa-section
+  のHTMLと初期化スクリプトのみ（hintButtonsSetup の前に配置） - 'llm' : llm-section のスタイル・スクリプト・HTML（従来の位置に配置） 依存関係: -
+  umeboshiLlmSetup.ejs（UmeboshiLLM グローバル） - umeboshiSync.ejs（UmeboshiSync グローバル） -
+  umeboshiLocalStorage.ejs（UmeboshiStorage グローバル） Parameters: - section: 'qa' | 'llm' _%>
+
+
+<% if (section==='qa' ) { %>
+<!-- Q&A セクション（saved Q&A一覧） -->
+<div id="umeboshi-qa-section" class="hidden">
+  <div class="umeboshi-qa-list"></div>
+  <button id="umeboshi-qa-add-btn" class="button-general" onclick="UmeboshiChat.openPostModal()">➕</button>
+</div>
+
+<script>
+  // qa-section 初期化（llmセクションの共有関数定義を待ってから実行）
+  setTimeout(function() {
+    try {
+      if (typeof __initQa === 'function') {
+        __initQa();
+      }
+    } catch (e) {}
+  }, 2000);
+</script>
+<% } %>
+
+
+<% if (section==='llm' ) { %>
+<!-- LLM チャットセクション（静的HTML） -->
+<div id="umeboshi-llm-section" class="hidden">
+  <div id="umeboshi-llm-messages"></div>
+  <div id="umeboshi-llm-input-box">
+    <div id="umeboshi-llm-input-container">
+      <textarea id="umeboshi-llm-input" placeholder="Ask a question" rows="1"></textarea>
+      <div id="umeboshi-llm-controls">
+        <button class="button-general umeboshi-template-btn" data-text="添付問題の解答({{c1::xxx}}部分)がどのようにしてその結論になるのかメカニズムの理由を説明">Why?</button>
+        <button class="button-general umeboshi-template-btn" data-text="添付問題の解答({{c1::xxx}}部分)のみについて、その専門用語とはなにか、意味を説明">What?</button>
+        <button class="button-general umeboshi-template-btn" data-text="添付問題の解答({{c1::xxx}}部分)について、臨床・研究的意義や応用例を説明">Significance</button>
+        <button class="button-general umeboshi-template-btn" data-text="添付問題の解答({{c1::xxx}}部分)のみについて、その専門用語の名前の由来を説明">Origin</button>
+        <div id="umeboshi-llm-right-btns">
+          <div id="umeboshi-thinking-toggle-label">
+            <button id="umeboshi-thinking-cb" class="umeboshi-toggle-btn" data-active="false" type="button"></button>
+            <span>🧠Thinking</span>
+          </div>
+          <div id="umeboshi-context-toggle-label">
+            <button id="umeboshi-context-cb" class="umeboshi-toggle-btn" data-active="true" type="button"></button>
+            <span>📌問題添付</span>
+          </div>
+          <button id="umeboshi-llm-send" disabled>➤</button>
+        </div>
+      </div>
+    </div>
+    <div id="umeboshi-llm-status"></div>
+  </div>
+</div>
+<script>
+  // ##############  UMEBOSHI LLM CHAT (v4 - ClaudeFlare SSE)  ##############
+  // LLM Q&Aチャットインターフェース - Claude.ai風デザイン
+  // ClaudeFlare SSEエンドポイント経由でストリーミングレスポンスを受信
+
+  // スタイルとmarked.jsの重複読み込み防止フラグ
+  if (typeof window.__umeboshiLlmChatLoaded === 'undefined') {
+    window.__umeboshiLlmChatLoaded = true;
+
+    // ============================================================
+    // ステート管理
+    // ============================================================
+    var __llmIsLoading = false; // リクエスト送信中フラグ
+    var __llmAbortCtrl = null; // AbortController（リクエストキャンセル用）
+    var __llmContextEnabled = true; // カードコンテキスト送信フラグ（初期化時に上書き）
+
+    // ストレージから設定を読み込みフラグを初期化
+    try {
+      var __savedData = UmeboshiStorage.load();
+      if (__savedData && __savedData.ui) {
+        __llmContextEnabled = __savedData.ui.contextEnabled !== false; // デフォルト true
+      }
+    } catch (e) {}
+
+    // ============================================================
+    // スタイル定義 (Claude UI inspired)
+    // ============================================================
+    var style = document.createElement('style');
+    style.textContent = [
+      '/* ===== Claude UI inspired LLM Chat ===== */',
+      '',
+      '#umeboshi-llm-section {',
+      '  margin-top: 0.571rem;',
+      '  border: none;',
+      '  border-radius: .6rem;',
+      '  display: flex !important;',
+      '  flex-direction: column;',
+      '  background-color: #1a1a1a;',
+      '  height: 30rem;',
+      '  max-height: 70vh;',
+      '}',
+      '',
+      '#umeboshi-llm-messages {',
+      '  flex: 1;',
+      '  overflow: auto;',
+      '  overflow-x: hidden;',
+      '  padding: 0.714rem 0.714rem 1.429rem;',
+      '  display: flex;',
+      '  flex-direction: column;',
+      '  min-height: 0;',
+      '  scroll-behavior: smooth;',
+      '  overscroll-behavior: contain;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper {',
+      '  display: flex;',
+      '  flex-direction: column;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper.user {',
+      '  align-items: flex-end;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper.assistant {',
+      '  align-items: flex-start;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble {',
+      '  position: relative;',
+      '  padding: 0.179rem 0.643rem;',
+      '  word-wrap: break-word;',
+      '  overflow-wrap: break-word;',
+      '  word-break: break-word;',
+      '  box-sizing: border-box;',
+      '  max-width: 85%;',
+      '  line-height: 1.65rem;',
+      '  font-size: .9em;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper.user .umeboshi-msg-bubble {',
+      '  background-color: #3a3a3a;',
+      '  color: #e5e5e5;',
+      '  border-radius: 0.643rem 0.643rem 0.143rem 0.643rem;',
+      '  padding: 0.357rem 0.571rem;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper.assistant .umeboshi-msg-bubble {',
+      '  background-color: transparent;',
+      '  color: #e5e5e5;',
+      '  padding: 0;',
+      '  max-width: 100%;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper.error .umeboshi-msg-bubble {',
+      '  background-color: #2a1a1a;',
+      '  color: #ef4444;',
+      '  border: 0.036rem solid #3a2020;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble p {',
+      '  margin: 0;',
+      '  line-height: 1.7;',
+      '  font-size: .9em;',
+      '  white-space: pre-wrap;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble h1,',
+      '.umeboshi-msg-bubble h2,',
+      '.umeboshi-msg-bubble h3,',
+      '.umeboshi-msg-bubble h4 {',
+      '  margin: 0.571rem 0 0.286rem 0;',
+      '  font-weight: 600;',
+      '  line-height: 1.4;',
+      '  font-size: 1.1em;',
+      '  color: #d8d8d8;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble td {',
+      '  background: #333;',
+      '  border-bottom: solid 0.1px #777;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble th {',
+      '  background: #464659;',
+      '  border-bottom: solid 0.1px #777;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble ul,',
+      '.umeboshi-msg-bubble ol {',
+      '  margin: 0.286rem 0;',
+      '  padding-left: 1.5em;',
+      '  max-width: 100%;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble li {',
+      '  margin: 0.143rem 0;',
+      '  line-height: 1.6;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble code {',
+      '  background: #2a2a2a;',
+      '  padding: 0.071rem 0.214rem;',
+      '  border-radius: 0.143rem;',
+      '  font-size: 0.9em;',
+      '  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble pre {',
+      '  background: #1a1a1a;',
+      '  border: 0.036rem solid #333;',
+      '  border-radius: 0.286rem;',
+      '  padding: 0.429rem 0.571rem;',
+      '  overflow-x: auto;',
+      '  margin: 0.286rem 0;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble pre code {',
+      '  background: none;',
+      '  padding: 0;',
+      '  border-radius: 0;',
+      '  font-size: 0.7em;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble blockquote {',
+      '  border-left: 0.107rem solid #555;',
+      '  padding-left: 0.429rem;',
+      '  margin: 0.286rem 0;',
+      '  color: #a0a0a0;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble strong {',
+      '  font-weight: 600;',
+      '  color: #f5f5f5;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble a {',
+      '  color: #6ea8fe;',
+      '  text-decoration: none;',
+      '}',
+      '',
+      '.umeboshi-msg-bubble a:hover {',
+      '  text-decoration: underline;',
+      '}',
+      '',
+      '.umeboshi-msg-actions {',
+      '  display: flex;',
+      '  gap: 0.143rem;',
+      '  margin-top: 0;',
+      '}',
+      '',
+      '.umeboshi-msg-wrapper:hover .umeboshi-msg-actions {',
+      '  opacity: 1;',
+      '}',
+      '',
+      '.umeboshi-msg-action-btn {',
+      '  background: none;',
+      '  border: none;',
+      '  color: #666;',
+      '  font-size: 1em;',
+      '  padding: 0.25rem 0.393rem;',
+      '  border-radius: 0.143rem;',
+      '  cursor: pointer;',
+      '  display: flex;',
+      '  align-items: center;',
+      '  gap: 0.143rem;',
+      '  transition: all 0.15s ease;',
+      '}',
+      '',
+      '.umeboshi-msg-action-btn:hover {',
+      '  background: #2a2a2a;',
+      '  color: #a0a0a0;',
+      '}',
+      '',
+      '#umeboshi-llm-input-box {',
+      '  background-color: #1a1a1a;',
+      '  padding: 0.357rem 0.714rem 0.714rem;',
+      '  border-top: 0.036rem solid #2a2a2a;',
+      '}',
+      '',
+      '#umeboshi-llm-input-container {',
+      '  display: flex;',
+      '  flex-direction: column;',
+      '  background-color: #2a2a2a;',
+      '  border-radius: 0.714rem;',
+      '  border: 0.036rem solid #3a3a3a;',
+      '  padding: 0.429rem 0.571rem;',
+      '  transition: border-color 0.2s ease, box-shadow 0.2s ease;',
+      '  box-shadow: 0 0.25rem 1.25rem hsl(0 0% 0% / 35%);',
+      '}',
+      '',
+      '#umeboshi-llm-input-container:focus-within {',
+      '  border-color: #555;',
+      '  box-shadow: 0 0.25rem 1.25rem hsl(0 0% 0% / 50%);',
+      '}',
+      '',
+      '#umeboshi-llm-input {',
+      '  width: 100%;',
+      '  min-height: 0.857rem;',
+      '  max-height: 7.143rem;',
+      '  border: none;',
+      '  border-radius: 0;',
+      '  padding: 0;',
+      '  margin: 0;',
+      '  font-size: 1em;',
+      '  resize: none;',
+      '  box-sizing: border-box;',
+      '  font-family: inherit;',
+      '  line-height: 1.5;',
+      '  overflow-y: auto;',
+      '  background-color: transparent;',
+      '  color: #e5e5e5;',
+      '  outline: none;',
+      '}',
+      '',
+      '#umeboshi-llm-input::placeholder {',
+      '  color: #666;',
+      '}',
+      '',
+      '#umeboshi-llm-controls {',
+      '  display: flex;',
+      '  align-items: center;',
+      '  gap: 0.286rem;',
+      '  margin-top: 0.286rem;',
+      '  flex-wrap: wrap;',
+      '}',
+      '',
+      '.umeboshi-template-btn {',
+      '  cursor: pointer;',
+      '  white-space: nowrap;',
+      '  font-weight: 300 !important;',
+      '}',
+      '',
+      '#umeboshi-llm-right-btns {',
+      '  margin-left: auto;',
+      '  display: flex;',
+      '  align-items: center;',
+      '  gap: 0.286rem;',
+      '}',
+      '',
+      '/* Toggle styles moved to toggleStyles.ejs */',
+      '',
+      '.umeboshi-toggle-btn {',
+      '  position: relative;',
+      '  width: 1.286rem;',
+      '  height: 0.714rem;',
+      '  border: none;',
+      '  border-radius: 0.2rem;',
+      '  background-color: #3a3a3a;',
+      '  cursor: pointer;',
+      '  padding: 0;',
+      '  flex-shrink: 0;',
+      '  transition: background-color 0.3s;',
+      '}',
+      '',
+      '.umeboshi-toggle-btn::after {',
+      '  content: "";',
+      '  position: absolute;',
+      '  width: 0.5rem;',
+      '  height: 0.5rem;',
+      '  border-radius: 0.16rem;',
+      '  background-color: #666;',
+      '  left: 0.07rem;',
+      '  bottom: 0.07rem;',
+      '  transition: transform 0.3s, background-color 0.3s;',
+      '}',
+      '',
+      '.umeboshi-toggle-btn[data-active="true"] {',
+      '  background-color: #e5e5e5;',
+      '}',
+      '',
+      '.umeboshi-toggle-btn[data-active="true"]::after {',
+      '  transform: translateX(0.57rem);',
+      '  background-color: #1a1a1a;',
+      '}',
+      '',
+      '#umeboshi-llm-send {',
+      '  width: 1.8rem;',
+      '  height: 1.8rem;',
+      '  border-radius: 0.286rem;',
+      '  border: none;',
+      '  background: #4b4b4b;',
+      '  color: #eee;',
+      '  cursor: pointer;',
+      '  display: flex;',
+      '  align-items: center;',
+      '  justify-content: center;',
+      '  padding: 0;',
+      '  margin: .05rem;',
+      '  line-height: 1;',
+      '  flex-shrink: 0;',
+      '  transition: all 0.15s ease;',
+      '}',
+      '',
+      '#umeboshi-llm-send:disabled {',
+      '  background: #3a3a3a;',
+      '  color: #777;',
+      '  cursor: not-allowed;',
+      '}',
+      '',
+      '#umeboshi-llm-send:not(:disabled):hover {',
+      '  background: #f5f5f5;',
+      '}',
+      '',
+      '#umeboshi-llm-status {',
+      '  font-size: 0.5em;',
+      '  color: #666;',
+      '  padding: 0.143rem 0;',
+      '  min-height: 0.571rem;',
+      '  text-align: center;',
+      '}',
+      '',
+      '#umeboshi-qa-section {',
+      '  margin-top: 0.571rem;',
+      '}',
+      '',
+      '#umeboshi-qa-list {',
+      '  display: flex;',
+      '  flex-wrap: wrap;',
+      '}',
+      '',
+      '.umeboshi-qa-item {',
+      '  margin-bottom: 0.143rem;',
+      '}',
+      '',
+      '/* .umeboshi-qa-btn styles moved to buttonStyles.ejs */',
+      '',
+      '.umeboshi-qa-content {',
+      '  display: none;',
+      '}',
+      '',
+      '.umeboshi-qa-content.open {',
+      '  display: block;',
+      '}',
+      '',
+      '@keyframes umeboshi-pulse {',
+      '  0%, 100% { opacity: 0.4; }',
+      '  50% { opacity: 1; }',
+      '}',
+      '',
+      '.umeboshi-thinking {',
+      '  animation: umeboshi-pulse 1.5s ease-in-out infinite;',
+      '  color: #666;',
+      '}',
+      '',
+      '.umeboshi-streaming-cursor {',
+      '  display: inline-block;',
+      '  width: 0.071rem;',
+      '  height: 1em;',
+      '  background: #e5e5e5;',
+      '  margin-left: 0.071rem;',
+      '  animation: umeboshi-blink 0.8s step-end infinite;',
+      '  vertical-align: text-bottom;',
+      '}',
+      '',
+      '@keyframes umeboshi-blink {',
+      '  0%, 100% { opacity: 1; }',
+      '  50% { opacity: 0; }',
+      '}',
+      '',
+      '#umeboshi-llm-messages::-webkit-scrollbar {',
+      '  width: 0.214rem;',
+      '}',
+      '',
+      '#umeboshi-llm-messages::-webkit-scrollbar-track {',
+      '  background: transparent;',
+      '}',
+      '',
+      '#umeboshi-llm-messages::-webkit-scrollbar-thumb {',
+      '  background: #333;',
+      '  border-radius: 0.107rem;',
+      '}',
+      '',
+      '#umeboshi-llm-messages::-webkit-scrollbar-thumb:hover {',
+      '  background: #444;',
+      '}',
+      '',
+      '#umeboshi-llm-input::-webkit-scrollbar {',
+      '  width: 0.143rem;',
+      '}',
+      '',
+      '#umeboshi-llm-input::-webkit-scrollbar-track {',
+      '  background: transparent;',
+      '}',
+      '',
+      '#umeboshi-llm-input::-webkit-scrollbar-thumb {',
+      '  background: #444;',
+      '  border-radius: 0.071rem;',
+      '}',
+      '',
+      '.umeboshi-thinking-block {',
+      '  margin-bottom: 0.286rem;',
+      '  border: 0.036rem solid #333;',
+      '  border-radius: 0.286rem;',
+      '  overflow: hidden;',
+      '}',
+      '',
+      '.umeboshi-thinking-header {',
+      '  padding: 0.286rem 0.429rem;',
+      '  background: #1e1e1e;',
+      '  color: #888;',
+      '  font-size: 0.7em;',
+      '  cursor: pointer;',
+      '  user-select: none;',
+      '  display: flex;',
+      '  align-items: center;',
+      '  gap: 0.214rem;',
+      '}',
+      '',
+      '.umeboshi-thinking-header:hover {',
+      '  background: #252525;',
+      '}',
+      '',
+      '.umeboshi-thinking-toggle {',
+      '  font-size: 0.7em;',
+      '  transition: transform 0.2s;',
+      '}',
+      '',
+      '.umeboshi-thinking-content {',
+      '  padding: 0.357rem 0.429rem;',
+      '  background: #1a1a1a;',
+      '  color: #777;',
+      '  font-size: 0.7em;',
+      '  line-height: 1.6;',
+      '  white-space: pre-wrap;',
+      '  word-wrap: break-word;',
+      '  max-height: 10.714rem;',
+      '  overflow-y: auto;',
+      '}',
+      '',
+      '/* ===== QA Post/Edit Modal ===== */',
+      '#umeboshi-qa-modal-overlay {',
+      '  display: none;',
+      '  position: fixed;',
+      '  top: 0; left: 0;',
+      '  width: 100%; height: 100%;',
+      '  background-color: rgba(0,0,0,0.7);',
+      '  z-index: 1000;',
+      '  justify-content: center;',
+      '  align-items: center;',
+      '}',
+      '#umeboshi-qa-modal-overlay.active { display: flex; }',
+      '#umeboshi-qa-modal {',
+      '  background-color: #2a2a2a;',
+      '  border: 1px solid #555;',
+      '  border-radius: 1rem;',
+      '  padding: 0.714rem;',
+      '  max-width: 40rem;',
+      '  width: 90%;',
+      '  color: #eee;',
+      '}',
+      '#umeboshi-qa-modal h3 {',
+      '  margin: 0;',
+      '  font-size: 1.2rem;',
+      '  color: #ccc;',
+      '  display: flex;',
+      '  justify-content: space-between;',
+      '  align-items: center;',
+      '  border: none;',
+      '}',
+      '#umeboshi-qa-modal-close {',
+      '  cursor: pointer;',
+      '  font-size: 1rem;',
+      '  color: #888;',
+      '  background: none;',
+      '  border: none;',
+      '  margin: .4rem;',
+      '}',
+      '#umeboshi-qa-input-content {',
+      '  width: 100%;',
+      '  resize: vertical;',
+      '  padding: 0.214rem 0.286rem;',
+      '  border: 0.036rem solid #555;',
+      '  border-radius: 0.4rem;',
+      '  background-color: #333;',
+      '  color: #ddd;',
+      '  font-size: 0.9rem;',
+      '  box-sizing: border-box;',
+      '}',
+      '#umeboshi-qa-input-title {',
+      '  width: 100%;',
+      '  min-height: 10rem;',
+      '  resize: vertical;',
+      '  padding: 0.214rem 0.286rem;',
+      '  border: 0.036rem solid #555;',
+      '  border-radius: 0.4rem;',
+      '  background-color: #333;',
+      '  color: #ddd;',
+      '  font-size: 0.9rem;',
+      '  box-sizing: border-box;',
+      '}',
+      '#umeboshi-qa-save-btn {',
+      '  background-color: #31643b;',
+      '  margin: .5rem 0rem .5rem 0rem;',
+      '  padding: 0.3rem 0.7rem;',
+      '}',
+      '#umeboshi-qa-delete-btn {',
+      '  background-color: #5a1b1b;',
+      '  margin: .5rem 0rem .5rem 0rem;',
+      '  padding: 0.3rem 0.7rem;',
+      '}',
+      '.umeboshi-qa-edit-btn {',
+      '  margin-top: 0.286rem;',
+      '  font-size: 0.7rem;',
+      '}',
+      '',
+      '/* ===== Mobile responsive ===== */',
+      '@media (max-width: 480px) {',
+      '  #umeboshi-llm-controls {',
+      '    gap: 0.2rem;',
+      '  }',
+      '  #umeboshi-llm-input-container {',
+      '    padding: 0.357rem 0.429rem;',
+      '  }',
+      '  .umeboshi-template-btn {',
+      '    font-size: 0.85em;',
+      '  }',
+      '}'
+    ].join('\n');
+    document.head.appendChild(style);
+
+    // ============================================================
+    // LLM セクション固有のヘルパー関数
+    // ============================================================
+
+    // === 送信ボタンの有効/無効切替 ===
+    function __llmUpdateSendButton() {
+      var input = document.getElementById('umeboshi-llm-input');
+      var btn = document.getElementById('umeboshi-llm-send');
+      if (input && btn) {
+        btn.disabled = !input.value.trim() || __llmIsLoading;
+      }
+    }
+
+    // === メッセージをチャット画面に追加 ===
+    function __llmAppendMessage(role, rawText, isJson) {
+      var container = document.getElementById('umeboshi-llm-messages');
+      if (!container) return null;
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'umeboshi-msg-wrapper ' + role;
+
+      var bubble = document.createElement('div');
+      bubble.className = 'umeboshi-msg-bubble';
+
+      if (role === 'assistant' && rawText && rawText !== 'Thinking...') {
+        if (isJson) {
+          try {
+            var parsed = JSON.parse(rawText);
+            if (parsed.title && parsed.content) {
+              var titleHtml = '<h4>' + __llmEscapeHtml(parsed.title) + '</h4>';
+              var contentHtml = __llmRenderMarkdown(parsed.content);
+              bubble.innerHTML = titleHtml + contentHtml;
+            } else {
+              bubble.innerHTML = __llmRenderMarkdown(rawText);
+            }
+          } catch (e) {
+            bubble.innerHTML = __llmRenderMarkdown(rawText);
+          }
+        } else {
+          bubble.innerHTML = __llmRenderMarkdown(rawText);
+        }
+
+        wrapper.appendChild(bubble);
+
+        var actions = document.createElement('div');
+        actions.className = 'umeboshi-msg-actions';
+
+        var pushBtn = document.createElement('button');
+        pushBtn.className = 'umeboshi-msg-action-btn';
+        pushBtn.innerHTML = '💾 全員に保存';
+        pushBtn.onclick = function() {
+          __llmSaveSingleResponse(rawText, isJson);
+        };
+        actions.appendChild(pushBtn);
+
+        wrapper.appendChild(actions);
+
+      } else if (role === 'user') {
+        bubble.textContent = rawText;
+        wrapper.appendChild(bubble);
+      } else {
+        bubble.textContent = rawText;
+        bubble.className = 'umeboshi-msg-bubble umeboshi-thinking';
+        wrapper.appendChild(bubble);
+      }
+
+      container.appendChild(wrapper);
+      container.scrollTop = container.scrollHeight;
+      return wrapper;
+    }
+
+    // === ストリーミングバブル作成 ===
+    function __llmCreateStreamingBubble() {
+      var container = document.getElementById('umeboshi-llm-messages');
+      if (!container) return null;
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'umeboshi-msg-wrapper assistant';
+
+      var thinkingBlock = document.createElement('div');
+      thinkingBlock.className = 'umeboshi-thinking-block';
+      thinkingBlock.style.display = 'none';
+
+      var thinkingHeader = document.createElement('div');
+      thinkingHeader.className = 'umeboshi-thinking-header';
+      thinkingHeader.innerHTML = '<span class="umeboshi-thinking-toggle">▶</span> Thinking...';
+      thinkingHeader.onclick = function() {
+        var content = thinkingBlock.querySelector('.umeboshi-thinking-content');
+        var toggle = thinkingBlock.querySelector('.umeboshi-thinking-toggle');
+        if (content.style.display === 'none') {
+          content.style.display = 'block';
+          toggle.textContent = '▼';
+        } else {
+          content.style.display = 'none';
+          toggle.textContent = '▶';
+        }
+      };
+
+      var thinkingContent = document.createElement('div');
+      thinkingContent.className = 'umeboshi-thinking-content';
+      thinkingContent.style.display = 'none';
+
+      thinkingBlock.appendChild(thinkingHeader);
+      thinkingBlock.appendChild(thinkingContent);
+      wrapper.appendChild(thinkingBlock);
+
+      var bubble = document.createElement('div');
+      bubble.className = 'umeboshi-msg-bubble';
+
+      var cursor = document.createElement('span');
+      cursor.className = 'umeboshi-streaming-cursor';
+      bubble.appendChild(cursor);
+
+      wrapper.appendChild(bubble);
+      container.appendChild(wrapper);
+      container.scrollTop = container.scrollHeight;
+
+      return {
+        wrapper: wrapper,
+        bubble: bubble,
+        cursor: cursor,
+        rawText: '',
+        thinkingBlock: thinkingBlock,
+        thinkingContent: thinkingContent,
+        thinkingHeader: thinkingHeader,
+        thinkingText: ''
+      };
+    }
+
+    // === Thinkingバブル更新 ===
+    function __llmUpdateThinkingBubble(streamEl, chunk) {
+      if (!streamEl) return;
+      streamEl.thinkingText += chunk;
+      streamEl.thinkingBlock.style.display = 'block';
+      streamEl.thinkingContent.style.display = 'block';
+      streamEl.thinkingContent.textContent = streamEl.thinkingText;
+      streamEl.thinkingHeader.innerHTML = '<span class="umeboshi-thinking-toggle">▼</span> Thinking...';
+
+      var container = document.getElementById('umeboshi-llm-messages');
+      if (container) container.scrollTop = container.scrollHeight;
+    }
+
+    // === ストリーミングバブル更新 ===
+    function __llmUpdateStreamingBubble(streamEl, chunk) {
+      if (!streamEl) return;
+      streamEl.rawText += chunk;
+
+      var rendered = __llmRenderMarkdown(streamEl.rawText);
+      streamEl.bubble.innerHTML = rendered;
+      streamEl.bubble.appendChild(streamEl.cursor);
+
+      var container = document.getElementById('umeboshi-llm-messages');
+      if (container) container.scrollTop = container.scrollHeight;
+    }
+
+    // === ストリーミングバブル確定 ===
+    function __llmFinalizeStreamingBubble(streamEl, isJson) {
+      if (!streamEl) return;
+
+      if (streamEl.cursor && streamEl.cursor.parentNode) {
+        streamEl.cursor.remove();
+      }
+
+      if (isJson) {
+        try {
+          var parsed = JSON.parse(streamEl.rawText);
+          if (parsed.title && parsed.content) {
+            streamEl.bubble.innerHTML = '<h4>' + __llmEscapeHtml(parsed.title) + '</h4>' + __llmRenderMarkdown(parsed.content);
+          } else {
+            streamEl.bubble.innerHTML = __llmRenderMarkdown(streamEl.rawText);
+          }
+        } catch (e) {
+          streamEl.bubble.innerHTML = __llmRenderMarkdown(streamEl.rawText);
+        }
+      } else {
+        streamEl.bubble.innerHTML = __llmRenderMarkdown(streamEl.rawText);
+      }
+
+      var rawText = streamEl.rawText;
+      var actions = document.createElement('div');
+      actions.className = 'umeboshi-msg-actions';
+
+      var pushBtn = document.createElement('button');
+      pushBtn.className = 'umeboshi-msg-action-btn';
+      pushBtn.innerHTML = '🔼 全員に保存';
+      pushBtn.onclick = function() {
+        __llmSaveSingleResponse(rawText, isJson);
+      };
+      actions.appendChild(pushBtn);
+
+      streamEl.wrapper.appendChild(actions);
+    }
+
+    // ============================================================
+    // llm-section 初期化
+    // ============================================================
+    function __initLlm() {
+      var input = document.getElementById('umeboshi-llm-input');
+      var sendBtn = document.getElementById('umeboshi-llm-send');
+      var contextCb = document.getElementById('umeboshi-context-cb');
+
+      if (input) {
+        input.addEventListener('input', __llmUpdateSendButton);
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            UmeboshiChat.sendMessage();
+          }
+        });
+
+        function resizeTextarea() {
+          input.style.height = 'auto';
+          var scrollHeight = input.scrollHeight;
+          input.style.height = scrollHeight + 'px';
+        }
+
+        input.addEventListener('input', resizeTextarea);
+      }
+
+      if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+          UmeboshiChat.sendMessage();
+        });
+      }
+
+      if (contextCb) {
+        // ストレージから状態を復元
+        try {
+          var __ctxData = UmeboshiStorage.load();
+          if (__ctxData && __ctxData.ui) {
+            var ctxEnabled = __ctxData.ui.contextEnabled !== false;
+            contextCb.setAttribute('data-active', String(ctxEnabled));
+            __llmContextEnabled = ctxEnabled;
+          }
+        } catch (e) {}
+
+        contextCb.addEventListener('click', function() {
+          var isActive = this.getAttribute('data-active') === 'true';
+          var newState = !isActive;
+          this.setAttribute('data-active', String(newState));
+          __llmContextEnabled = newState;
+          UmeboshiStorage.set('ui.contextEnabled', newState);
+        });
+      }
+
+      // Thinking toggle (button-based)
+      var thinkingCb = document.getElementById('umeboshi-thinking-cb');
+      if (thinkingCb) {
+        try {
+          var savedData = UmeboshiStorage.load();
+          if (savedData && savedData.ui) {
+            thinkingCb.setAttribute('data-active', String(!!savedData.ui.thinkingEnabled));
+          }
+        } catch (e) {}
+
+        thinkingCb.addEventListener('click', function() {
+          var isActive = this.getAttribute('data-active') === 'true';
+          var newState = !isActive;
+          this.setAttribute('data-active', String(newState));
+          UmeboshiStorage.set('ui.thinkingEnabled', newState);
+        });
+      }
+
+      var templateBtns = document.querySelectorAll('.umeboshi-template-btn');
+      for (var i = 0; i < templateBtns.length; i++) {
+        templateBtns[i].addEventListener('click', function() {
+          var text = this.getAttribute('data-text');
+          if (input && text) {
+            input.value = text;
+            input.focus();
+            __llmUpdateSendButton();
+          }
+        });
+      }
+    }
+
+    // ============================================================
+    // パブリックAPI
+    // ============================================================
+    window.UmeboshiChat = {
+      sendMessage: function() {
+        var input = document.getElementById('umeboshi-llm-input');
+        if (!input) return;
+
+        var msg = input.value.trim();
+        if (!msg || __llmIsLoading) return;
+
+        input.value = '';
+        input.style.height = 'auto';
+        __llmIsLoading = true;
+        __llmUpdateSendButton();
+        __llmSetStatus('Sending...');
+        __llmAppendMessage('user', msg);
+
+        var streamEl = __llmCreateStreamingBubble();
+
+        var context = {};
+        if (__llmContextEnabled && typeof UmeboshiLLM !== 'undefined') {
+          context = UmeboshiLLM.buildContext({
+            text: true,
+            extra: true
+          });
+        }
+
+        // Thinking設定をコールバック閉包で参照
+        var __thinkingEnabledForSend = false;
+        try {
+          var __tData = UmeboshiStorage.load();
+          if (__tData && __tData.ui) __thinkingEnabledForSend = !!__tData.ui.thinkingEnabled;
+        } catch (e) {}
+
+        UmeboshiLLM.streamFromClaudeFlare(msg, context,
+          function onChunk(chunk) {
+            __llmUpdateStreamingBubble(streamEl, chunk);
+            __llmSetStatus('Receiving...');
+          },
+          function onDone(usage) {
+            var rawText = streamEl ? streamEl.rawText : '';
+
+            var isJson = false;
+            try {
+              var parsed = JSON.parse(rawText);
+              if (parsed.title && parsed.content) {
+                isJson = true;
+              }
+            } catch (e) {}
+
+            __llmFinalizeStreamingBubble(streamEl, isJson);
+
+            __llmIsLoading = false;
+            __llmUpdateSendButton();
+            __llmSetStatus('');
+          },
+          function onError(err) {
+            if (streamEl && streamEl.wrapper) {
+              streamEl.wrapper.className = 'umeboshi-msg-wrapper error';
+              if (streamEl.cursor && streamEl.cursor.parentNode) {
+                streamEl.cursor.remove();
+              }
+              streamEl.bubble.textContent = 'Error: ' + err;
+              streamEl.bubble.className = 'umeboshi-msg-bubble';
+            }
+
+            __llmIsLoading = false;
+            __llmUpdateSendButton();
+            __llmSetStatus('');
+          },
+          function onThinking(thinkingChunk) {
+            // Thinking無効時は表示しない
+            if (__thinkingEnabledForSend) {
+              __llmUpdateThinkingBubble(streamEl, thinkingChunk);
+            }
+          }
+        );
+      },
+
+      clearChat: function() {
+        var container = document.getElementById('umeboshi-llm-messages');
+        if (container) container.innerHTML = '';
+        __llmSetStatus('Chat cleared');
+      },
+
+      // 投稿モーダルを開く
+      openPostModal: function() {
+        document.getElementById('umeboshi-qa-modal-title').textContent = 'New Post';
+        document.getElementById('umeboshi-qa-input-title').value = '';
+        document.getElementById('umeboshi-qa-input-content').value = '';
+        var overlay = document.getElementById('umeboshi-qa-modal-overlay');
+        overlay.dataset.editId = '';
+        document.getElementById('umeboshi-qa-delete-btn').style.display = 'none';
+        overlay.classList.add('active');
+      },
+
+      // 編集モーダルを開く
+      openEditModal: function(qaId, title, content) {
+        document.getElementById('umeboshi-qa-modal-title').textContent = 'Edit Post';
+        document.getElementById('umeboshi-qa-input-title').value = title || '';
+        document.getElementById('umeboshi-qa-input-content').value = content || '';
+        var overlay = document.getElementById('umeboshi-qa-modal-overlay');
+        overlay.dataset.editId = qaId || '';
+        document.getElementById('umeboshi-qa-delete-btn').style.display = 'flex';
+        overlay.classList.add('active');
+      },
+
+      // モーダルを閉じる
+      closeQaModal: function() {
+        document.getElementById('umeboshi-qa-modal-overlay').classList.remove('active');
+      },
+
+      // 投稿/編集を保存
+      saveQaPost: function() {
+        var title = document.getElementById('umeboshi-qa-input-title').value.trim();
+        var content = document.getElementById('umeboshi-qa-input-content').value.trim();
+        if (!title || !content) {
+          alert('Title and content are required');
+          return;
+        }
+        var noteId = __llmGetNoteId();
+        if (!noteId) return;
+        var overlay = document.getElementById('umeboshi-qa-modal-overlay');
+        var editId = overlay ? (overlay.dataset.editId || '') : '';
+        UmeboshiSync.saveQa(noteId, {
+            title: title,
+            content: content,
+            id: editId
+          })
+          .then(function() {
+            UmeboshiChat.closeQaModal();
+            __llmLoadQaFromCloud();
+          })
+          .catch(function(err) {
+            alert('Save failed: ' + err.message);
+          });
+      },
+
+      // 削除
+      deleteQaPost: function() {
+        var overlay = document.getElementById('umeboshi-qa-modal-overlay');
+        var editId = overlay ? (overlay.dataset.editId || '') : '';
+        if (!editId) {
+          alert('No QA entry to delete');
+          return;
+        }
+        if (!window.confirm('Are you sure you want to delete this for everyone? This cannot be undone.')) return;
+        var noteId = __llmGetNoteId();
+        if (!noteId) return;
+        UmeboshiSync.deleteQa(noteId, editId)
+          .then(function() {
+            UmeboshiChat.closeQaModal();
+            __llmLoadQaFromCloud();
+          })
+          .catch(function(err) {
+            alert('Delete failed: ' + err.message);
+          });
+      },
+
+      initQa: __initQa,
+      initLlm: __initLlm
+    };
+
+  } // end __umeboshiLlmChatLoaded guard
+
+  // ============================================================
+  // 自動初期化（llm-section） — ガード外で毎回実行
+  // ============================================================
+  setTimeout(function() {
+    try {
+      __initLlm();
+    } catch (e) {}
+  }, 1500);
+</script>
+
+<!-- 投稿・編集モーダル（QAとLLM両セクションから利用） -->
+<div id="umeboshi-qa-modal-overlay" onclick="UmeboshiChat.closeQaModal()">
+  <div id="umeboshi-qa-modal" onclick="event.stopPropagation()">
+    <h3>
+      <span id="umeboshi-qa-modal-title">New Post</span>
+      <button id="umeboshi-qa-modal-close" onclick="UmeboshiChat.closeQaModal()">✕</button>
+    </h3>
+    <div class="umeboshi-modal-group">
+      <label>Title</label>
+      <input type="text" id="umeboshi-qa-input-title" placeholder="Title">
+    </div>
+    <div class="umeboshi-modal-group">
+      <label>Content</label>
+      <textarea id="umeboshi-qa-input-content" placeholder="Content..." rows="4"></textarea>
+    </div>
+    <button id="umeboshi-qa-save-btn" class="button-general" onclick="UmeboshiChat.saveQaPost()">Save for everyone</button>
+    <button id="umeboshi-qa-delete-btn" class="button-general" onclick="UmeboshiChat.deleteQaPost()">Delete for everyone</button>
+    <button class="button-general" onclick="UmeboshiChat.closeQaModal()">Cancel</button>
+  </div>
+</div>
+
+<% } %>

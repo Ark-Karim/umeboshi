@@ -1,0 +1,11 @@
+<!-- IMAGE BLUR -->
+<!-- .blur クラス付き画像をクリックでぼかし解除/再適用 -->
+<script>
+    // 全ぼかし画像にクリックイベントを設定
+    for (const image of document.querySelectorAll(".blur")) {
+        image.classList.add("tappable");
+        image.addEventListener("click", () => {
+            image.classList.toggle("blur");
+        });
+    }
+</script>

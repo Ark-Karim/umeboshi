@@ -1,0 +1,159 @@
+<script>
+  // ##############  HINT REVEAL SHORTCUTS  ##############
+  // All shortcuts will also open with "H" if using the Hint Hotkeys add-on 
+  var ButtonShortcuts = {
+    // "Lecture Notes": "Alt + 1",
+    // "Missed Questions": "Alt + 2",
+    // "Pathoma": "Alt + 3",
+    // "Boards and Beyond Links": "",
+    // "Boards and Beyond": "Alt + 4",
+    // "First Aid Links": "",
+    // "First Aid": "Alt + 5",
+    // "Sketchy": "Alt + 6",
+    // "Sketchy 2": "",
+    // "Sketchy Extra": "",
+    // "Picmonic": "",
+    // "Pixorize": "Alt + 7",
+    // "Physeo": "Alt + 8",
+    // "Bootcamp": "Alt + F2",
+    // "OME": "Alt + F1",
+    // "Additional Resources": "Alt + 9",
+  }
+
+  var ToggleAllButtonsShortcut = "'"
+  var ToggleNextButtonShortcut = "H";
+  // ##############  SHOW HINTS AUTOMATICALLY  ##############
+  var ButtonAutoReveal = {
+    "highYieldSummary": false,
+    "detailedDescription": true,
+    "visualAids": true,
+    "additionalResources": false,
+  }
+
+  var ScrollToButton = true;
+
+  var autoflip = true // UmeboshiStorage読み込み後に上書き
+
+
+  <%- include('src/configs/colorfulTags.js') %>
+  <%- include('src/configs/clozeOneByOne.js', {selective: true}) %>
+</script>
+
+
+<%- include('src/components/googleFonts.ejs') %>
+<%- include('src/components/buttonStyles.ejs') %>
+<%- include('src/components/contentsStyle.ejs') %>
+<%- include('src/components/ruby.ejs') %>
+<%- include('src/components/toggleStyles.ejs') %>
+
+
+<!-- タイミングドット（clozeOneByOneのめくり間隔判定用） -->
+<div id="umeboshi-timing-dot"></div>
+
+<div class="content-container" id="umeboshi-main-content">
+  <div id="back">
+    <div class="clozefield" id="text">{{cloze:text}}</div>
+    <!-- <div class="editcloze" id="text">{{edit:cloze:text}}</div> -->
+    <div id="raw-text" style="display:none">{{text}}</div>
+    <span id="umeboshi-note-id" style="display:none">{{umeboshiNoteId}}</span>
+    <hr>
+    <!-- ワンバイワン操作ボタン（textとextraの間） -->
+    {{#extra}}
+      <div id="extra">{{edit:extra}}</div>
+    {{/extra}}
+  </div>
+</div>
+
+<!-- BUTTON FIELDS -->
+
+<%- include('src/components/clozeOneByOneButtons.ejs', {optional: true}) %>
+
+<!-- 脳休憩カウントダウンオーバーレイ（全面黒＋数字表示） -->
+<%- include('src/components/brainRestCountdownHTML.ejs') %>
+
+<div class="horizontal-btn">
+
+  <%- include("src/components/hintButton.ejs", {name: "highYieldSummary", short:"hys", hintId: "hys", displayName: "✨highYieldSummary"}) %>
+  <%- include("src/components/hintButton.ejs", {name: "visualAids", short:"va", hintId: "va", displayName: "👀visualAids"}) %>
+  <%- include("src/components/hintButton.ejs", {name: "additionalResources", short:"ar", hintId: "ar"}) %>
+
+</div>
+
+<!-- LLM-QA -->
+
+<%- include('src/components/umeboshiLlmSetup.ejs') %>
+<%- include('src/components/umeboshiLlmChat.ejs', { section: 'qa' }) %>
+
+
+
+
+<!-- Umeboshi setups -->
+
+<!-- ##############  UMEBOSHI KANAME FEATURES  ############## -->
+<%- include('src/components/umeboshiLocalStorage.ejs') %>
+<script>
+  // autoFlip設定をlocalStorageから読み込み
+  try {
+    var _savedAutoFlip = UmeboshiStorage.get('ui.autoFlip');
+    if (_savedAutoFlip !== undefined) autoflip = _savedAutoFlip;
+  } catch (e) {}
+
+  // ButtonAutoRevealをUmeboshiStorageから上書き
+  try {
+    var _hintSettings = UmeboshiStorage.get('hints.autoRevealHints');
+    if (_hintSettings) {
+      for (var _key in _hintSettings) {
+        if (_hintSettings.hasOwnProperty(_key)) {
+          ButtonAutoReveal[_key] = _hintSettings[_key];
+        }
+      }
+    }
+  } catch (e) {}
+</script>
+<%- include('src/components/umeboshiSync.ejs') %>
+
+
+<!-- LLM chat section -->
+<%- include('src/components/umeboshiLlmChat.ejs', { section: 'llm' }) %>
+
+
+
+
+
+<%- include('src/components/umeboshiSettingsModal.ejs') %>
+<!-- ##############  END UMEBOSHI KANAME FEATURES  ############## -->
+
+<!-- AnKing共通コンポーネント -->
+<%- include('src/components/ankingAddEventListener.ejs') %>
+<%- include('src/components/shortcutMatcher.ejs') %>
+<%- include('src/components/colorfulTags.ejs') %>
+<%- include('src/components/tagBasedHintButtonsSetup.ejs') %>
+
+<%- include('src/components/hintButtonsSetup.ejs') %>
+
+<%- include('src/components/ankiPersistence.ejs') %>
+<%- include('src/components/umeboshiTtsClient.ejs') %>
+<%- include('src/components/clozeOneByOneBack.ejs', {optional: true}) %>
+
+<!-- 脳休憩カウントダウンスクリプト（clozeOneByOneBackのタイミングリセット関数に依存） -->
+<%- include('src/components/brainRestCountdownScript.ejs') %>
+
+<%- include('src/components/wikipediaSearches.ejs') %>
+
+<%- include('src/components/ankiMobileUserActions.ejs') %>
+<%- include('src/components/imageBlur.ejs') %>
+
+<%- include('src/components/shuffleItems.ejs') %>
+
+
+<!-- UserAction 1/2 でワンバイワントグルを呼び出し -->
+<script>
+  if (typeof ankiUserAction1 === 'undefined') {
+    var ankiUserAction1 = (typeof toggleAllCloze === 'function') ? toggleAllCloze : function() {};
+  }
+  if (typeof ankiUserAction2 === 'undefined') {
+    var ankiUserAction2 = (typeof revealNextCloze === 'function') ? revealNextCloze : function() {};
+  }
+  userJs1 = ankiUserAction1;
+  userJs2 = ankiUserAction2;
+</script>

@@ -1,0 +1,30 @@
+<%#
+# ヒントボタンテンプレート (EJS partial)
+# パラメータ:
+- name: string (フィールド名)
+- short: string (短縮ID)
+- hintId: string (ヒント表示エリアID)
+<!-- - icon?: string (ボタンアイコン画像) -->
+- noText?: boolean (テキスト非表示)
+- displayName?: string (表示名)
+# 依存: hintButtonsSetup.ejs (after)
+_%>
+<%_
+  var noText = noText === undefined ? false : noText
+  // var icon = icon === undefined ? "_AnKingIconSmall.png" : icon
+  var displayName = displayName === undefined ? name : displayName
+  const containerId = `hint-${short}`
+  const btnId = `button-${short}`
+_%>
+<!-- ヒントボタン: <%- name %> -->
+{{#<%- name %>}}
+  <span id="<%- containerId %>" class="hintBtn" data-name="<%-name%>">
+    <a href="#" class="hint" onclick="toggleHintBtn('<%- containerId %>')"></a>
+    <button id="<%- btnId %>" class="button-general" onclick="toggleHintBtn('<%- containerId %>')">
+      <% if (!noText) { %><%- displayName %><% } %>
+    </button>
+    <div dir="auto" id="<%- hintId %>" class="hints" style="display: none;">
+      <div class="content-container">{{edit:<%- name %>}}</div>
+    </div>
+  </span>
+{{/<%- name %>}}

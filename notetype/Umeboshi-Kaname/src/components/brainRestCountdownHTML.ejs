@@ -1,0 +1,51 @@
+<%# brainRestCountdownHTML.ejs — Brain Rest Countdown overlay (HTML + CSS)
+   依存: UmeboshiStorage の ui.countdownEnabled / ui.countdownBrainRestSec %>
+<style>
+  /* ~~~~~~~~~ BRAIN REST COUNTDOWN OVERLAY ~~~~~~~~~ */
+  .brainrest-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .brainrest-dialog {
+    text-align: center;
+    color: #eee;
+    font-size: 1rem;
+    user-select: none;
+    pointer-events: none;
+    font-family: system-ui, sans-serif;
+  }
+
+  .brainrest-dialog .brainrest-text {
+    color: #aaa;
+    margin-bottom: 0.357rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.1rem;
+    line-height: 1.5;
+  }
+
+  #brainrest-number {
+    color: #eee;
+    font-size: 2.5rem;
+    font-weight: bold;
+    font-family: system-ui, sans-serif;
+    text-shadow: 0 0 0.714rem rgba(255, 255, 255, 0.2);
+  }
+</style>
+
+<div class="brainrest-overlay" id="brainrest-overlay" style="display: none;">
+  <div class="brainrest-dialog">
+    <div class="brainrest-text">Recall the previous question...</div>
+    <div id="brainrest-number">3</div>
+  </div>
+</div>

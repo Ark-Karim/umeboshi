@@ -1,0 +1,69 @@
+<!-- ショートカットキーマッチング関数 -->
+<script>
+  // 特殊文字→keyCode変換テーブル
+  var specialCharCodes = {
+    "-": "minus",
+    "=": "equal",
+    "[": "bracketleft",
+    "]": "bracketright",
+    ";": "semicolon",
+    "'": "quote",
+    "`": "backquote",
+    "\\": "backslash",
+    ",": "comma",
+    ".": "period",
+    "/": "slash",
+  };
+
+  /**
+   * ショートカット文字列 (例: "Ctrl+Shift+N") を受け取り、
+   * キーボードイベントがマッチするか判定する関数を返す
+   */
+  function shortcutMatcher(shortcut) {
+    if (!shortcut) return function() { return false; };
+    // "Ctrl+Shift+N" → ["ctrl", "shift", "n"]
+    let shortcutKeys = shortcut.toLowerCase().split(/[+]/).map(key => key.trim())
+    let mainKey = shortcutKeys[shortcutKeys.length - 1]
+    const mainKeyVariants = [];
+
+    // 主キーのcode変換
+    if (mainKey.length === 1) {
+      if (/\d/.test(mainKey)) {
+        // 数字キー: digit系とnumpad系の両方をマッチ
+        mainKeyVariants.push("digit" + mainKey)
+        mainKeyVariants.push("numpad" + mainKey)
+      } else if (/[a-zA-Z]/.test(mainKey)) {
+        // アルファベット: key系
+        mainKeyVariants.push("key" + mainKey)
+      } else {
+        // 特殊文字: テーブルで変換
+        let code = specialCharCodes[mainKey];
+        if (code) {
+          mainKey = code
+          mainKeyVariants.push(code)
+        } else {
+          mainKeyVariants.push(mainKey)
+        }
+      }
+    } else {
+      // 複数文字 (例: "Escape", "Enter")
+      mainKeyVariants.push(mainKey)
+    }
+
+    // 修飾キーの状態を取得
+    let ctrl = shortcutKeys.includes("ctrl")
+    let shift = shortcutKeys.includes("shift")
+    let alt = shortcutKeys.includes("alt")
+
+    // イベントマッチ関数を生成して返す
+    let matchShortcut = function (ctrl, shift, alt, mainKeyVariants, event) {
+      if (!mainKeyVariants.includes(event.code.toLowerCase())) return false
+      if (ctrl !== (event.ctrlKey || event.metaKey)) return false
+      if (shift !== event.shiftKey) return false
+      if (alt !== event.altKey) return false
+      return true
+    }.bind(window, ctrl, shift, alt, mainKeyVariants)
+
+    return matchShortcut
+  }
+</script>

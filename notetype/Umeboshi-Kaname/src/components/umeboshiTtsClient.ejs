@@ -1,0 +1,198 @@
+<script>
+// ##############  UMEBOSHI TTS CLIENT  ##############
+// Google Cloud TTS → AnkiDroidJS → speechSynthesis の3層フォールバック
+var TTSClient = (function() {
+  'use strict';
+
+  // === 連続再生対策（古いfetch結果を破棄） ===
+  var _speakSeq = 0;
+  var _currentAudio = null;
+
+  // === ログ（テスト時は外部から上書き） ===
+  var _logFn = function() {};
+
+  // --- 現在の再生を停止 ---
+  function stopCurrent() {
+    _speakSeq++;
+    if (_currentAudio) {
+      _currentAudio.pause();
+      _currentAudio.currentTime = 0;
+      _currentAudio = null;
+    }
+  }
+
+  // --- Base64 → Blob URL ---
+  function base64ToBlobUrl(base64, mimeType) {
+    try {
+      var binary = atob(base64);
+      var len = binary.length;
+      var bytes = new Uint8Array(len);
+      for (var i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+    } catch (e) {
+      _logFn('[TTS] Base64 decode error: ' + e.message);
+      return null;
+    }
+  }
+
+  // --- Audio 再生 ---
+  function playAudio(blobUrl) {
+    stopCurrent();
+    var seq = _speakSeq;
+    var audio = new Audio(blobUrl);
+    audio.addEventListener('ended', function() {
+      _logFn('[TTS] Playback ended');
+      if (_currentAudio === audio) _currentAudio = null;
+    });
+    audio.addEventListener('error', function() {
+      _logFn('[TTS] Audio playback error');
+      if (_currentAudio === audio) _currentAudio = null;
+    });
+    _currentAudio = audio;
+    audio.play().then(function() {
+      _logFn('[TTS] Playing audio...');
+    }).catch(function(err) {
+      _logFn('[TTS] Play failed: ' + err.message);
+      _currentAudio = null;
+    });
+  }
+
+  // --- UmeboshiStorage から API Key 取得 ---
+  function getGoogleApiKey() {
+    try {
+      if (typeof UmeboshiStorage !== 'undefined' && UmeboshiStorage.get) {
+        return UmeboshiStorage.get('tts.googleApiKey') || '';
+      }
+    } catch (e) {}
+    return '';
+  }
+
+  // === Google Cloud TTS API ===
+  function speakViaGoogleTTS(text, lang) {
+    var apiKey = getGoogleApiKey();
+    if (!apiKey) {
+      _logFn('[TTS] Google API key not set → fallback');
+      return false;
+    }
+
+    var seq = _speakSeq;
+    _logFn('[TTS] Google TTS fetch...');
+
+    fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey
+      },
+      body: JSON.stringify({
+        input: { text: text },
+        voice: { languageCode: lang },
+        audioConfig: { audioEncoding: 'MP3' }
+      })
+    })
+    .then(function(res) {
+      if (seq !== _speakSeq) return null;
+      if (!res.ok) {
+        _logFn('[TTS] Google TTS HTTP ' + res.status);
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.json();
+    })
+    .then(function(data) {
+      if (!data || seq !== _speakSeq) return;
+      if (!data.audioContent) {
+        _logFn('[TTS] Google TTS response missing audioContent');
+        throw new Error('No audioContent');
+      }
+      var blobUrl = base64ToBlobUrl(data.audioContent, 'audio/mpeg');
+      if (!blobUrl) throw new Error('Base64 decode failed');
+      if (seq === _speakSeq) {
+        _logFn('[TTS] Google TTS success → playing');
+        playAudio(blobUrl);
+      }
+    })
+    .catch(function(err) {
+      if (seq !== _speakSeq) return;
+      _logFn('[TTS] Google TTS failed: ' + err.message + ' → fallback');
+      fallbackTTS(text, lang);
+    });
+
+    return true;
+  }
+
+  // === フォールバック音声（AnkiDroidJS → speechSynthesis） ===
+  function getFallbackVoice() {
+    if (typeof speechSynthesis === 'undefined') return null;
+    var voices = speechSynthesis.getVoices();
+    var preferred = ['Samantha', 'Zira'];
+    for (var p = 0; p < preferred.length; p++) {
+      for (var v = 0; v < voices.length; v++) {
+        if (voices[v].name.indexOf(preferred[p]) !== -1 &&
+            voices[v].lang.indexOf('en') === 0) {
+          return voices[v];
+        }
+      }
+    }
+    for (var w = 0; w < voices.length; w++) {
+      if (voices[w].lang.indexOf('en') === 0) return voices[w];
+    }
+    return null;
+  }
+
+  function fallbackTTS(text, lang) {
+    // AnkiDroid ネイティブ TTS
+    if (typeof AnkiDroidJS !== 'undefined' && typeof AnkiDroidJS.ankiTtsSpeak === 'function') {
+      try { AnkiDroidJS.ankiTtsSetLanguage(lang); } catch(e) {}
+      _logFn('[TTS] Fallback → AnkiDroidJS.ankiTtsSpeak()');
+      AnkiDroidJS.ankiTtsSpeak(text);
+      return;
+    }
+
+    // Web Speech API
+    if (typeof speechSynthesis === 'undefined') {
+      _logFn('[TTS] Fallback → speechSynthesis unavailable (silent)');
+      return;
+    }
+
+    speechSynthesis.cancel();
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = 1.0;
+    var voice = getFallbackVoice();
+    if (voice) {
+      utterance.voice = voice;
+      _logFn('[TTS] Fallback → speechSynthesis (voice: ' + voice.name + ')');
+    } else {
+      _logFn('[TTS] Fallback → speechSynthesis (default voice)');
+    }
+    speechSynthesis.speak(utterance);
+  }
+
+  // === 公開API ===
+  return {
+    speak: function(text, lang) {
+      if (!text) {
+        _logFn('[TTS] Empty text → skip');
+        return;
+      }
+      lang = lang || 'en-US';
+      stopCurrent();
+      if (!speakViaGoogleTTS(text, lang)) {
+        fallbackTTS(text, lang);
+      }
+    },
+    stop: function() {
+      _logFn('[TTS] stop()');
+      stopCurrent();
+      if (typeof speechSynthesis !== 'undefined') {
+        speechSynthesis.cancel();
+      }
+    },
+    setLogCallback: function(fn) {
+      _logFn = (typeof fn === 'function') ? fn : function() {};
+    }
+  };
+})();
+</script>

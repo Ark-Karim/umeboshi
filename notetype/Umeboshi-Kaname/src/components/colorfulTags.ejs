@@ -1,0 +1,51 @@
+<%#
+# カラフルタグ表示コンポーネント
+# 依存: ankingAddEventListener, shortcutMatcher
+# グローバル変数:
+- toggleTagsShortcut: string (タグ表示切替ショートカット)
+- tagID: string (赤背景で強調するタグ名)
+- numTagLevelsToShow: int (表示するタグレベル数、0=全体)
+_%>
+<!-- カラフルタグ表示 -->
+{{#Tags}}
+<div id="tags-container">{{clickable::Tags}}</div>
+<script>
+  var tagContainer = document.getElementById("tags-container")
+  var tagList;
+
+  // 子要素がない場合 (初回表示): kbd要素を生成
+  if (tagContainer.childElementCount == 0) {
+    tagList = tagContainer.innerHTML.split(" ");
+    var kbdList = [];
+    var newTagContent = document.createElement("div");
+
+    // 各タグをkbd要素として装飾
+    for (var i = 0; i < tagList.length; i++) {
+      var newTag = document.createElement("kbd");
+      var tag = tagList[i];
+      // タグレベル指定がある場合、末尾Nレベルのみ表示
+      if(numTagLevelsToShow != 0){
+        tag = tag.split('::').slice(-numTagLevelsToShow).join("::");
+      }
+      newTag.innerHTML = tag;
+      newTagContent.append(newTag)
+    }
+    tagContainer.innerHTML = newTagContent.innerHTML;
+    tagContainer.style.cursor = "default";
+  }
+  else {
+    // 既存の子要素からタグリストを取得
+    tagList = Array.from(tagContainer.children).map(e => e.innerText);
+  }
+
+  // グローバルにタグリストを公開 (autoReveal等で使用)
+  globalThis.tagList = tagList.map(t => t.trim().toLowerCase());
+
+  // 特定タグが含まれる場合、赤背景で強調
+  if (tagContainer.innerHTML.indexOf(tagID) != -1) {
+    tagContainer.style.backgroundColor = "rgba(251,11,11,.15)";
+  }
+
+  // タグは常時表示（切替機能なし）
+</script>
+{{/Tags}}

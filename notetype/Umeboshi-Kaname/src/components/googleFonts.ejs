@@ -1,0 +1,21 @@
+<%# Google Fonts: Noto Sans JP（日本語）+ Open Sans（英語・コード）_%>
+<!-- フォントの事前接続で読み込み高速化 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@100..700&family=Noto+Sans+JP:wght@100..900&family=Open+Sans:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+
+
+<style>
+  /* デフォルト: Open Sans優先（英語・コード向け） */
+  * {
+    font-family: 'Open Sans', 'Noto Sans JP', sans-serif;
+  }
+
+  /* コード領域: Open Sans + monospace */
+  code,
+  pre,
+  .code,
+  [class*="lang-"] {
+    font-family: "M PLUS 1 Code", monospace;
+  }
+</style>

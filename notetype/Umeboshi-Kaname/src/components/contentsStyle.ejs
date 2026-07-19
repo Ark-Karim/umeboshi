@@ -1,0 +1,305 @@
+<%# contentsStyle.ejs - フィールド・テーブル・リスト・画像スタイル一元管理 (rem単位) %>
+<%# 基準: 1rem = cardFontSize (デフォルト28px) %>
+<style>
+  /* ~~~~~~~~~ PARAGRAPHS ~~~~~~~~~ */
+  p {
+    margin-top: 0.4em;
+    margin-bottom: 0.4em;
+  }
+
+  /* ~~~~~~~~~ BILINGUAL ~~~~~~~~~ */
+
+
+
+
+  ruby {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: baseline;
+    vertical-align: 0em;
+    line-height: 1.5;
+    margin: 0px;
+    padding-left: 3px;
+    padding-right: 3px;
+    font-size: 1em;
+    ruby-align: center;
+    font-family: 'Open Sans', 'Noto Sans JP', sans-serif;
+  }
+
+  rt {
+    font-size: 0.5em;
+    color: gray;
+    letter-spacing: 0.12em;
+    font-weight: normal;
+    margin-top: -0.1em;
+  }
+
+
+
+  /* ~~~~~~~~~ HEADINGS ~~~~~~~~~ */
+  h1 {
+    padding: 0;
+    font-size: 1.1rem;
+    color: #222;
+  }
+
+  h2 {
+    margin-top: 1rem;
+    margin-bottom: 0.2rem;
+    padding-left: 0.4rem;
+    border-left: solid 0.2rem #aaa;
+    font-size: 1.1rem;
+    color: #222;
+  }
+
+  h3 {
+    margin-top: 1rem;
+    margin-bottom: .2rem;
+    padding-left: 0.4rem;
+    border-left: solid 0.2rem #aaa;
+    font-size: .9rem;
+    color: #111;
+  }
+
+  /* ~~~~~~~~~ HORIZONTAL RULE ~~~~~~~~~ */
+  hr {
+    opacity: .7
+  }
+
+  /* ~~~~~~~~~ TIMER ~~~~~~~~~ */
+  .timer {
+    font-size: 0.714rem;
+    margin: 12em auto auto auto;
+  }
+
+  /* ~~~~~~~~~ FIELDS ~~~~~~~~~ */
+  .cloze {
+    background: linear-gradient(transparent 40%, #ccf 40%, #ccf 80%, transparent 80%);
+    font-weight: bold;
+    font-size: 1em;
+    padding-left: 0.179rem;
+    padding-right: 0.179rem;
+  }
+
+  .hints+#extra {
+    margin-top: 1rem;
+  }
+
+  #extra {
+    font-style: normal;
+    font-size: var(--extra-font-size);
+  }
+
+  /* ~~~~~~~~~ TABLE STYLES ~~~~~~~~~ */
+
+
+  table {
+    margin-bottom: 15px;
+    margin-left: 5px;
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  tr:nth-child(2n) {
+    background: #efe;
+  }
+
+  th {
+    padding: 10px;
+    border-bottom: solid 0.5px #777;
+    background: #eee;
+  }
+
+  td {
+    padding: 10px;
+    min-width: 80px;
+  }
+
+
+
+
+  /* ~~~~~~~~~ IMAGE DETAILS ~~~~~~~~~ */
+  .mobile .card img {
+    max-width: 100% !important;
+  }
+
+  #extra img {
+    min-width: 0%;
+  }
+
+  .mobile .hints,
+  .mobile #extra img {
+    max-width: 100% !important;
+  }
+
+  .image40 img {
+    width: 40% !important;
+  }
+
+  .image50 img {
+    width: 50% !important;
+  }
+
+  .image60 img {
+    width: 60% !important;
+  }
+
+  .image70 img {
+    width: 70% !important;
+  }
+
+  .image80 img {
+    width: 80% !important;
+  }
+
+  .image90 img {
+    width: 90% !important;
+  }
+
+  .image40 img,
+  .image50 img,
+  .image60 img,
+  .image70 img,
+  .image80 img,
+  .image90 img {
+    display: block;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .mobile .image40 img,
+  .mobile .image50 img,
+  .mobile .image60 img,
+  .mobile .image70 img,
+  .mobile .image80 img,
+  .mobile .image90 img {
+    width: auto !important;
+  }
+
+  /*Image hover zoom*/
+  #extra img:active,
+  #notes img:active,
+  #missed img:active,
+  #pathoma img:active,
+  #bnb img:active {
+    transform: scale(1.2);
+  }
+
+  #firstaid img:active,
+  #sketchy img:active,
+  #sketchy2 img:active,
+  #sketchyextra img:active,
+  #picmonic img:active,
+  #pixorize img:active,
+  #physeo img:active,
+  #additional img:active {
+    transform: scale(1.5);
+  }
+
+  .mobile img:active {
+    transform: scale(1.0) !important;
+  }
+
+
+
+
+  /* ~~~~~~~~~ LISTS ~~~~~~~~~ */
+  ul,
+  ol {
+    padding-left: 1.7rem;
+    text-align: left;
+  }
+
+  ul ul,
+  table ul,
+  ol ol,
+  table ol {
+    padding-left: 0.714rem;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    display: block;
+  }
+
+
+
+  code,
+  pre,
+  .code,
+  [class*="lang-"] {
+    font-size: 0.9rem;
+    margin-left: 0.4rem;
+    padding: 0.4rem;
+    padding-left: 0.5rem;
+    background-color: #eee;
+    border-radius: 8px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+
+
+  pre {
+    margin: 0.5rem;
+  }
+
+
+  /* ~~~~~~~~~ FONT SIZE CSS VARIABLES (applied) ~~~~~~~~~ */
+  :root {
+    --text-font-size: 1rem;
+    --extra-font-size: 1rem;
+    --button-font-size: 1rem;
+    --hint-font-size: 1rem;
+    --llm-section-font-size: 1rem;
+    --llm-qa-font-size: 1rem;
+  }
+
+  #text {
+    font-size: var(--text-font-size);
+  }
+
+  .button-general {
+    font-size: var(--button-font-size) !important;
+  }
+
+  .hints .content-container {
+    font-size: var(--hint-font-size);
+  }
+
+  #umeboshi-llm-section {
+    font-size: var(--llm-section-font-size);
+  }
+
+  #umeboshi-qa-section {
+    font-size: var(--llm-qa-font-size);
+  }
+
+  /* ~~~~~~~~~ TIMING DOT (clozeOneByOne) ~~~~~~~~~ */
+  #umeboshi-timing-dot {
+    position: fixed;
+    top: 0.357rem;
+    right: 0.357rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    display: none;
+    z-index: 9999;
+    --timing-easy-color: #0099ff;
+    --timing-medium-color: #3cff00;
+    --timing-hard-color: #ffa200;
+    background-color: var(--timing-easy-color);
+  }
+
+  #umeboshi-timing-dot.timing-easy {
+    background-color: var(--timing-easy-color);
+  }
+
+  #umeboshi-timing-dot.timing-medium {
+    background-color: var(--timing-medium-color);
+  }
+
+  #umeboshi-timing-dot.timing-hard {
+    background-color: var(--timing-hard-color);
+  }
+</style>
