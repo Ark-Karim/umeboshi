@@ -98,8 +98,8 @@ examples/        Sample content and source attribution
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
-Includes code derived from AnKing Overhaul — see [NOTICE](NOTICE).
+GNU AGPL-3.0 — see [LICENSE](LICENSE).
+Includes code derived from AnKing Note Types — see [NOTICE](NOTICE).
 
 ## Community
 

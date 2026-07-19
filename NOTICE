@@ -1,15 +1,17 @@
 Umeboshi
 Copyright 2026 Umeboshi Contributors
 
+This product is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0). See LICENSE for the full text.
+
 This product includes software developed by the AnKing team
-(https://github.com/AnKingMed/AnKing-Overhaul), licensed under
-the Apache License, Version 2.0.
+(https://github.com/AnKing-VIP/AnKing-Note-Types), licensed under
+the GNU Affero General Public License v3.0 (AGPL-3.0).
 
 The Umeboshi-Kaname notetype styling and card templates are derived
-from the AnKing Overhaul project's card styling system. The original
-work can be found at:
+from the AnKing Note Types project. The original work can be found at:
 
-  https://github.com/AnKingMed/AnKing-Overhaul
+  https://github.com/AnKing-VIP/AnKing-Note-Types
 
 Modifications include:
 - Japanese language support with furigana (ruby) annotations

@@ -3,8 +3,8 @@
   "description": "Umeboshi plugin registry — maps backend types to active plugins. To switch backends, change the plugin name here. Plugins are auto-discovered from subdirectories matching their type.",
   "backends": {
     "transcribe": {
-      "active": "fireworks-whisper",
-      "description": "Converts audio/video files to text. Default: Fireworks Whisper API."
+      "active": "local-whisper",
+      "description": "Converts audio/video files to text. Default: local Whisper (English, no API key). Add plugins/transcribe/<name>/SKILL.md for external services."
     },
     "generate": {
       "active": "claude-code",
