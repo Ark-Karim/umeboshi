@@ -2,7 +2,7 @@
 
 このファイルは `/loop` の各反復で最初に読み込むこと。
 判断の思想的根拠は `PRINCIPLES.md`、技術的な制約は `SPEC.md`、
-背景は `PROJECT_PROPOSAL.md` を参照すること。
+背景は `PROJECT.md` を参照すること。
 
 ## ミッション(1文で)
 

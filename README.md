@@ -4,54 +4,46 @@ Turn lecture slides and textbooks into high-quality Anki flashcards with bilingu
 annotations, visual aids, and cloze deletions — in 3 commands.
 
 ```bash
-# 1. Install Claude Code and copy skills
-npm install -g @anthropic-ai/claude-code
-cp -r skills/* ~/.claude/skills/
+# 1. Clone and install
+git clone https://github.com/umeboshi/umeboshi.git && cd umeboshi
+./install.sh
 
 # 2. Set your API keys
-export FIREWORKS_API_KEY="fw_..."     # for audio transcription
-export DEEPSEEK_API_KEY="sk-..."      # for card generation
+export FIREWORKS_API_KEY="fw_..."     # Fireworks Console → API Keys
+export DEEPSEEK_API_KEY="sk-..."      # DeepSeek Platform → API Keys
 
-# 3. Generate cards from your lecture
-claude /anki-card-generator-without-hs
+# 3. Import the notetype, then launch
+#    (Anki → Manage Note Types → Add → paste from notetype/Umeboshi-Kaname/)
+claude
+#    Inside Claude Code, type: /anki-card-generator-without-hs
 ```
-
-## What This Does
-
-Umeboshi (梅干し) is a Claude Code skill pipeline that transforms medical
-learning materials into structured Anki flashcards:
-
-1. **Transcribe** — Convert lecture audio to text (Fireworks Whisper API)
-2. **Structure** — Extract key concepts into organized sections
-3. **Cloze** — Generate fill-in-the-blank questions with smart grouping
-4. **Annotate** — Add English medical terminology as furigana (ruby)
-5. **Visualize** — Auto-generate diagrams, tables, and flowcharts
-6. **Import** — Push cards directly to Anki via AnkiConnect
 
 ## Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
-- [Anki](https://apps.ankiweb.net/) 24.06+
-- [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (included in Anki 24.06+)
+- **[Node.js](https://nodejs.org/) 18+** and **[Git](https://git-scm.com/)**
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** CLI (`npm install -g @anthropic-ai/claude-code`)
+- **[Anki](https://apps.ankiweb.net/) 24.06+** with AnkiConnect enabled
+- **Anki running** in the background (cards are pushed via AnkiConnect on port 8765)
 - Fireworks API key ([console.fireworks.ai](https://console.fireworks.ai))
 - DeepSeek API key ([platform.deepseek.com](https://platform.deepseek.com))
-- (Optional) Cloudflare Workers account for cloud sync
 
-## Setup
+## One-Time Setup
 
-See [docs/SETUP.md](docs/SETUP.md) for detailed instructions including:
-- Installing the Umeboshi-Kaname notetype in Anki
-- Configuring the ClaudeFlare cloud sync backend (optional)
-- Troubleshooting common issues
+1. **Import the notetype** — Open Anki → Tools → Manage Note Types → Add.
+   Copy `notetype/Umeboshi-Kaname/Front.html`, `Back.html`, and `Styling.css`.
+   See [docs/SETUP.md](docs/SETUP.md) for screenshots.
 
-## Quick Start
+2. **(Optional) Deploy ClaudeFlare** — Cloud sync for LLM Q&A across devices.
+   `cd claudeflare && npm install && wrangler deploy`
 
-```
-1. Open Claude Code in your lecture directory
-2. Run: /anki-card-generator-without-hs
-3. Follow the prompts to select your input file (audio/pdf/txt)
-4. Cards appear in Anki automatically
-```
+## What This Does
+
+1. **Transcribe** — Lecture audio → text (Fireworks Whisper API)
+2. **Structure** — Key concepts → organized sections
+3. **Cloze** — Fill-in-the-blank cards with smart grouping
+4. **Annotate** — English medical terms as furigana (ruby)
+5. **Visualize** — Auto-generated diagrams, tables, flowcharts
+6. **Import** — Cards pushed directly to Anki via AnkiConnect
 
 ## Project Structure
 
@@ -59,19 +51,17 @@ See [docs/SETUP.md](docs/SETUP.md) for detailed instructions including:
 skills/          Claude Code skill definitions (the pipeline)
 notetype/        Anki card template (Umeboshi-Kaname)
 claudeflare/     Cloudflare Worker for cloud sync (optional)
-docs/            Detailed documentation
+docs/            Detailed setup guide & troubleshooting
 examples/        Sample content and source attribution
-plans/           Project planning documents
 ```
 
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
-This project includes code derived from AnKing Overhaul — see [NOTICE](NOTICE).
+Includes code derived from AnKing Overhaul — see [NOTICE](NOTICE).
 
 ## Community
 
-This is a community-driven project. AI-generated cards may contain errors —
-always verify medical content against trusted sources.
+AI-generated cards may contain errors — verify medical content against trusted sources.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

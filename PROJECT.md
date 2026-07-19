@@ -75,7 +75,7 @@
 
 ```
 PRINCIPLES.md      … 判断の思想的な軸(すでに合意済み)
-PROJECT_PROPOSAL.md … 本書。何を・なぜ・誰のために(人間向けサマリ)
+PROJECT.md … 本書。何を・なぜ・誰のために(人間向けサマリ)
 SPEC.md             … 技術要件・セキュリティ・DoD(Claude Code が参照する詳細仕様)
 GOAL.md             … /loop で毎回参照する実行規約(自律性の範囲・進捗管理)
 ```

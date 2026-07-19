@@ -1,0 +1,15 @@
+# Gitleaks configuration for Umeboshi
+# Detects secrets, API keys, tokens before they enter git history
+
+title = "Umeboshi Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Known false positives"
+  paths = [
+    '''NOTICE''',
+    '''LICENSE''',
+    '''plans/''',
+  ]

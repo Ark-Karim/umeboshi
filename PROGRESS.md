@@ -58,11 +58,12 @@
 
 - **Status**: Done
 - **Started**: 2026-07-18
-- **Completed**: 2026-07-18
+- **Completed**: 2026-07-19
 - **Summary**:
-  - README.md: A4一枚相当、3ステップ intro、プロジェクト構造、前提条件
-  - install.sh: スキルコピー自動化、API キー設定案内
+  - README.md: 3コマンド quickstart（clone→install→API keys→launch）、前提条件（Node.js, Git, Anki 起動中必須）、notetype インポート手順
+  - install.sh: スキルコピー自動化
   - docs/SETUP.md: 詳細セットアップ手順、トラブルシューティング
+  - 自己検証実施: README のみを見た第三者として再現テスト → 5件の問題を検出・修正（git clone不在、CLI構文誤り、Node.js/Git未記載、notetypeインポート不在、Anki起動条件未記載）
 
 ## Phase 6: ライセンス・帰属の整備
 
@@ -77,19 +78,19 @@
 
 - **Status**: Done
 - **Started**: 2026-07-18
+- **Completed**: 2026-07-19
 - **Summary**:
-  - Definition of Done チェックリスト:
-    - ✅ README に 3ステップ quickstart あり
-    - ✅ README は A4一枚相当（約380語、コンパクト）
-    - ✅ install.sh によるセットアップ自動化
-    - ✅ 詳細ドキュメントは docs/ に分離
-    - ✅ API キー取得・設定手順を明記
-    - ✅ LICENSE (Apache 2.0), NOTICE を整備
-    - ✅ PII サニタイズ済み（notetype テンプレートの Cloudflare サブドメイン）
-    - ✅ .gitignore で env ファイル、node_modules 等を除外
-    - ⚠️ 自己検証（第三者としての再現テスト）は未実施（API キー・Anki 環境が必要なため）
-    - ⚠️ secret scan の CI 組み込みは未実施（gitlint/gitleaks の導入を推奨）
-- **Open Issues**: 自己検証と CI 設定は公開後の改善項目とする
+  - **Secret scan CI**: `.github/workflows/secret-scan.yml` (gitleaks on push/PR), `.gitleaks.toml`, `scripts/pre-commit-secret-scan.sh`
+  - **自己検証実施**: README だけを見た第三者としてステップバイステップで再現テスト
+    - ✅ `install.sh` 実行確認（~/.claude/skills/ へコピー成功）
+    - ✅ secret scan 実施（クリーン、シークレット検出なし）
+    - ✅ README の修正（5件の不足を検出・修正）
+    - ⚠️ Anki 実機テストは未実施（Anki 実行環境がないため）
+  - セキュリティ最終チェック:
+    - ✅ `.gitignore` で `.env`, `node_modules`, 音声/PDF を除外
+    - ✅ git author 匿名 (`Umeboshi <umeboshi@example.com>`)
+    - ✅ notetype テンプレート内 PII プレースホルダー化確認
+  - **Definition of Done**: README 3行で clone→install→生成 の流れが完結
 
 ## Phase 8: 公開 (エスカレーション対象)
 
