@@ -3,96 +3,159 @@ name: html-formatter
 description: HTMLの出力形式や書式を定義する。HTMLでの出力やHTMLファイルの作成を求められたらどんな場合でもこのスキルに従う。
 ---
 
-# format
+# Format
 
-## 使用できるタグ
+## Requirements
 
-* `<h1>`
-* `<h2>`
-* `<h3>`
+### MUST
 
-* `<p>`
-* `<strong>`
+1. Wrap plain text in `<p>` tags — even single-line paragraphs.
+2. Follow the example format; generate output by adapting the provided examples.
+3. Place a half-width space immediately before every `<ruby>`, `</ruby>`, `<rt>`, and `</rt>` tag.
+<!-- （プレーンテキストも必ず <p> で囲む。例の書式に従って生成する。<ruby> 系タグの直前には半角スペースを入れる。） -->
 
-* `<ul>`
-* `<ol>`
-* `<li>`
+### NEVER
 
-* `<code>`
+1. Do not use `style` or `class` attributes inside HTML tags.
+2. Do not define CSS with `<style>` — CSS is always provided separately.
+3. Do not write CSS at all.
+4. External CDNs, external fonts, and external images are prohibited.
+5. Never include `<body>`, `<html>`, or any document-level wrapper tags.
+6. Do not use `<details>` or `<summary>`.
+7. Do not use `<pre>`, `<sup>`, or `<sub>` — they disrupt display when combined with `<ruby>`. Use HTML entities instead (e.g. `&#8308;` for superscript 4).
+<!-- （style/class属性の併記禁止。<style>やCSS記述禁止。外部CDN・フォント・画像禁止。<body>/<html> は含めない。<details>/<summary> 禁止。<pre>/<sup>/<sub> は ruby との表示崩れのため禁止、エスケープで代替。） -->
 
-* `<table>`
-* `<thead>`
-* `<tbody>`
-* `<tfoot>`
-* `<tr>`
-* `<th>`
-* `<td>`
+### SHOULD
 
-* `<ruby>`
-* `<rt>`
+1. Use only the allowed tags listed below.
+2. Escape characters that interfere with HTML parsing. Escape emojis.
+<!-- （許可タグのみ使用。HTML干渉文字と絵文字はエスケープ。） -->
 
-* `<img>`
-* `<audio>`
+### COULD
 
-* `<hr>`
-* `<blockquote>`
+1. Preserve `[]` attribute annotations for technical terms within bold text, if already present in input.
+2. Preserve `『』` metaphor annotations, if already present in input.
+<!-- （入力に既に含まれる [] 属性注釈や『』比喩注釈は引き継いでよい。） -->
 
+## Chain of Thought
 
-## 禁止事項
+1. Identify the structural elements in the source content: headings, paragraphs, lists, tables, and any terminology/metaphor annotations already present.
+2. Wrap every plain-text paragraph in `<p>` tags, applying `<strong>` for bold spans and `<code>` for inline code references.
+3. Structure list items: use `<ul>` for unordered lists or `<ol>` for ordered lists, with each item in `<li>`.
+4. Build tables: wrap in `<table>`, use `<thead>` / `<tbody>` / `<tfoot>` as appropriate, with `<tr>` for rows and `<th>` / `<td>` for cells.
+5. Apply `<ruby>` and `<rt>` for furigana/reading annotations, ensuring a half-width space precedes each ruby tag.
+6. Apply `[]` attribute annotations for technical terms within bold text (`<strong>`) — only if such annotations already exist in the input. Do not invent new ones.
+7. Apply `『』` metaphor annotations — only if such annotations already exist in the input. Do not invent new ones.
+8. Escape HTML-sensitive characters (`<`, `>`, `&`) and all emoji using HTML entities or numeric character references.
+9. Strip or reject any prohibited constructs: `style`/`class` attributes, `<style>` blocks, external resource references, document-wrapper tags (`<html>`, `<body>`), `<details>`/`<summary>`, and `<pre>`/`<sup>`/`<sub>`.
+10. Output only the content fragment — never wrap output in `<html>`, `<head>`, or `<body>`.
+<!-- （1. 元コンテンツの構造を特定。2. プレーンテキストを <p> で囲み <strong>/<code> を適用。3. リストを <ul>/<ol>/<li> で構造化。4. 表を <table> 系タグで構築。5. <ruby>/<rt> を適用し直前に半角スペース。6-7. [] 属性注釈・『』比喩注釈は入力にあれば引き継ぎ、新規追加しない。8. HTML干渉文字と絵文字をエスケープ。9. 禁止要素を除去。10. コンテンツ断片のみ出力し <html>/<body> でラップしない。） -->
 
-- HTMLタグ内の style, class 併記は、行ってはいけない。
-- <style> で CSS を定義してはいけない。CSS はどんな場合でも、別ですでに用意されている。
-- CSS を書いてはいけない。
-- 外部 CDN・外部フォント・外部画像は禁止
-- <body>, <html> などのタグは決して含めない。
-- <details>, <summary> は使用禁止
-- <pre>, <sup>, <sub> は使用禁止。<ruby> と併用すると表示が乱れるため。&#8308; のように、エスケープする。
+## Allowed Tags
 
-## 特殊要件
+- `<h1>`
+- `<h2>`
+- `<h3>`
 
-- plain text も <p> で囲む。
-- HTML タグと干渉するものは エスケープする. 絵文字は escape する. 
+- `<p>`
+- `<strong>`
 
-## 消極的ルール (新しく修正する必要はないが、入力ファイルに含まれていたら書式を引き継ぐ)
+- `<ul>`
+- `<ol>`
+- `<li>`
 
-### 専門用語の属性明記ルール (`[]`)
+- `<code>`
 
-太字内（`**`, `<strong>`）で, 以下に分類される専門用語（分子、医薬品、解剖学用語、疾患など）が初めて登場する際、読み手の認知負荷を排除するため、名称の直後に `[]`（角括弧）を用いてその「属性や分類」を明記. 属性の記述にあたっては、以下の指定対象リストから最も適切なものを選択して適用. リスト外の属性を使ってはいけない. [] 内は英語表記のみとし、ruby は付けない。
+- `<table>`
+- `<thead>`
+- `<tbody>`
+- `<tfoot>`
+- `<tr>`
+- `<th>`
+- `<td>`
 
-[] 内に指定する対象リスト
-- 分子・物質： [mol] [ion] [peptide] [prot] (protein) [enz] [rcpt] [ch] [gene] [bioact] (生理活性物質) [bmrk] (biomarker)
-- 医薬品・治療： [drug] [MoA] (mechanism of action) [RoA] (route of administration) [metabolic path] (代謝経路) [trnsp] (transporter) [proc] (術式) [anesthesia] (麻酔法) [CI] (禁忌) [SE] (side effect)
-- 解剖・組織： [sys] [site] [struct] [tis] [cell] [epithelial class]
-- 医学・病態： [dz] [sx] [sign] [pathog] [vir class] [Gram] [test] [lab] [ECG] [sev class] [RF] [px] [epidemiological index]
-- その他： [class]
+- `<ruby>`
+- `<rt>`
 
-### 比喩の併記ルール (`『』`)
+- `<img>`
+- `<audio>`
 
-『』を使用して比喩を明記する. 『』内には ruby を付けてはいけない. 日本語か英語の一方のみとする. 
+- `<hr>`
+- `<blockquote>`
 
-- 例: ユビキチン化 『分解・廃棄のタグ付け』
-- 例: Cascade 『ドミノ倒し』
+<!-- （使用を許可されているHTMLタグの一覧。） -->
 
+## Prohibited Rules
+
+- Do not use `style` or `class` attributes inside HTML tags.
+- Do not define CSS with `<style>`. CSS is always provided separately.
+- Do not write CSS at all.
+- External CDNs, external fonts, and external images are prohibited.
+- Never include tags such as `<body>` or `<html>`.
+- `<details>` and `<summary>` are prohibited.
+- `<pre>`, `<sup>`, and `<sub>` are prohibited. They disrupt display when used together with `<ruby>`. Use numeric character references instead, e.g. `&#8308;`.
+
+<!-- （style/class属性併記禁止。<style>やCSS記述禁止。外部CDN・フォント・画像禁止。<body>/<html> を含めない。<details>/<summary> 禁止。<pre>/<sup>/<sub> は ruby 併用時の表示崩れのため禁止、数値文字参照で代用。） -->
+
+## Special Requirements
+
+- Plain text must also be wrapped in `<p>`.
+- Escape content that interferes with HTML tags. Escape emojis.
+
+<!-- （プレーンテキストも <p> で囲む。HTMLタグと干渉する文字と絵文字はエスケープする。） -->
+
+## Passive Rules (Conservative Rules)
+
+These rules need not be applied proactively; however, if the input file already contains these annotations, preserve the formatting as-is.
+
+<!-- （積極的に適用する必要はないが、入力ファイルに既に含まれている場合は書式を引き継ぐルール群。） -->
+
+### Terminology Attribute Annotation Rule (`[]`)
+
+When a technical term (molecule, drug, anatomical term, disease, etc.) appears for the first time inside bold text (`**`, `<strong>`), append its category/classification in `[]` (square brackets) immediately after the term to reduce the reader's cognitive load. Choose the most appropriate label from the list below. Do not use any attribute outside this list. The content inside `[]` must be in English only; do not attach `<ruby>` to it.
+
+<!-- （太字内で専門用語が初出する際、認知負荷軽減のため直後に [] で属性を明記。下記リストから選択し、リスト外は使わない。[] 内は英語のみ、ruby は付けない。） -->
+
+Valid `[]` labels:
+
+- Molecules / Substances: `[mol]` `[ion]` `[peptide]` `[prot]` (protein) `[enz]` `[rcpt]` `[ch]` `[gene]` `[bioact]` (physiologically active substance) `[bmrk]` (biomarker)
+- Drugs / Treatments: `[drug]` `[MoA]` (mechanism of action) `[RoA]` (route of administration) `[metabolic path]` (metabolic pathway) `[trnsp]` (transporter) `[proc]` (procedure) `[anesthesia]` (anesthesia method) `[CI]` (contraindication) `[SE]` (side effect)
+- Anatomy / Histology: `[sys]` `[site]` `[struct]` `[tis]` `[cell]` `[epithelial class]`
+- Medicine / Pathology: `[dz]` `[sx]` `[sign]` `[pathog]` `[vir class]` `[Gram]` `[test]` `[lab]` `[ECG]` `[sev class]` `[RF]` `[px]` `[epidemiological index]`
+- Other: `[class]`
+
+<!-- （[] 内に指定可能なラベルの一覧。分子・物質、医薬品・治療、解剖・組織、医学・病態、その他に分類。） -->
+
+### Metaphor Annotation Rule (`『』`)
+
+Use `『』` (Japanese corner brackets) to explicitly mark metaphors. Do not attach `<ruby>` to content inside `『』`. Use either Japanese or English only — do not mix languages inside the brackets.
+
+- Example: Ubiquitination 『タグ付けによる分解・廃棄の指示』
+- Example: Cascade 『ドミノ倒し』
+
+<!-- （比喩を『』で明記。『』内に ruby は付けない。日本語か英語の一方のみ。例を参照。） -->
 
 ---
 
-# Priorities
+## Priorities
 
-要件が相反する場合は以下の順で優先する。
+When requirements conflict, resolve in the following priority order.
+
+<!-- （要件が相反する場合の優先順位。） -->
 
 MUST
 
-1. 禁止事項 の遵守
-2. 特殊要件 の遵守
-3. example 形式の遵守（example を書き換えるように生成。）
-4. 消極的ルール
+1. Comply with all Prohibited Rules.
+2. Comply with all Special Requirements.
+3. Comply with the example format (generate output by adapting the examples).
+4. Follow Passive Rules (conservative rules).
 
 SHOULD
 
-5. 使用できるタグ の遵守
-6. `<ruby>`, `</ruby>`, `<rt>`, `</rt>` の直前には必ず半角スペースを入れる
+5. Comply with allowed-tag restrictions.
+6. Always insert a half-width space immediately before `<ruby>`, `</ruby>`, `<rt>`, and `</rt>`.
 
-
+<!-- （MUST: 1.禁止事項遵守 2.特殊要件遵守 3.例の書式遵守 4.消極的ルール準拠。SHOULD: 5.許可タグ遵守 6.ruby系タグ直前に半角スペース。） -->
 
 ---
 

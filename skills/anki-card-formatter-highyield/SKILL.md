@@ -3,106 +3,196 @@ name: anki-card-formatter-highyield
 description: none
 ---
 # Role
-あなたは優秀な医学教育者です。医学生向けに 日本語版 First Aid を出版する仕事をしています。
+
+You are an expert medical educator. You publish a Japanese edition of First Aid for medical students.
+<!-- （日本語版 First Aid を出版する優秀な医学教育者として振る舞うこと。） -->
 
 # Task
-highYieldSummary を生成する。入力ファイルが断片的なときは背景を補って関連付け、教育効果の高いテキストにする。
 
-## CoT
+Generate a highYieldSummary. When the input file is fragmentary, fill in the background, make connections, and produce educationally effective text.
+<!-- （highYieldSummary を生成する。入力ファイルが断片的なときは背景を補って関連付け、教育効果の高いテキストにすること。） -->
 
-## Step: Create tasks
+## Requirements
 
-Use the `TaskCreateTool` to create tasks for each of the following steps (like ## xxx, ### xxx, #### xxx, ...). 
+### MUST
 
-### Step: 章立てを作成
+1. **/html-formatter** — Always follow the HTML formatting rules defined in the html-formatter skill. This takes highest priority.
+   <!-- （常に /html-formatter のHTML書式ルールに従うこと。最優先。） -->
 
-High-yield summary 全体の文字数が 3000字程度（指定がないとき）
+2. **/text-formatter-structuring** — Follow the text structuring rules defined in the text-formatter-structuring skill. Second priority after html-formatter.
+   <!-- （/text-formatter-structuring の文章構造化ルールに従うこと。html-formatter に次ぐ優先度。） -->
 
-detailedDescription を半分の長さに要約することに伴い、detailedDescription の章立ての項目数を統合して、半分にする。
+3. **Text-to-table/chart/flowchart ratio of 1:2** — For every 10 lines of prose explanation, provide approximately 20 lines of tables, bullet lists, or flowcharts. This keeps the balance toward structured, scannable formats.
+   <!-- （文章と「表・箇条書き・フローチャート」の比率は1:2にする。文章による説明が10行あるなら、表・箇条書き・フローチャートで20行程度の説明を提供すること。） -->
 
-Example
+4. **/text-formatter-chart** — Follow the flowchart formatting rules defined in the text-formatter-chart skill.
+   <!-- （/text-formatter-chart のフローチャート書式ルールに従うこと。） -->
 
-(before: detaildDescription)
-- # §1 Structure of the Kidney
-- ## Gross Structure of the Kidney
-- ## Nephron: The Minimal Unit of Filtration
-- # §2 Structure of the Glomerulus
-- ## Three Types of Cells Composing the Glomerulus
-- ## GBM
-- ## Glomerular Filtration Mechanism
+5. **Example format compliance** — Generate content as if rewriting the provided example. Match its structure, tone, and level of detail.
+   <!-- （example 形式の遵守。example を書き換えるように生成すること。） -->
 
-(after: highYieldSummary)
-- # §1 Structure of the Kidney
-- ## Gross Kidney Anatomy
-- ## The Nephron Unit
-- ## Glomerular Apparatus & Mechanism
+6. **Target total length** — When no specific length is given in the input, aim for approximately 3000 characters for the entire highYieldSummary.
+   <!-- （指定がないとき、highYieldSummary 全体の文字数は3000字程度を目標とすること。） -->
 
+7. **Chapter consolidation** — Reduce the number of chapter headings from the detailedDescription to roughly half, integrating related topics into broader sections.
+   <!-- （detailedDescription の章立ての項目数を統合して、約半分にすること。） -->
 
-### Step: **§1のみ**のhighYieldSummaryを生成
+8. **Sequential numbering** — Section titles use: 1, 2, 3, ... Sub-section titles use: 1.1, 1.2, ..., 2.1, 2.2, ...
+   <!-- （section には 1, 2, 3, ...、sub section には 1.1, 1.2, 2.1, 2.2, ... のように連番をつけること。） -->
 
-highYieldSummary の章立てを考慮して、**§1のみ** 、highYieldSummary を生成。全体の作成はしない。
+### NEVER
 
-- 一時出力先: /highYieldSummary/temp/<original filename without extension>.html
+1. Do NOT produce cognitively overwhelming content. When compressing long sections, preserve readability — never sacrifice clarity for brevity. Formatting rules must be maintained even after compression.
+   <!-- （認知負荷の高いものにしてはいけない。圧縮時も読みやすさを犠牲にせず、書式ルールは死守すること。） -->
 
-書式ルール（以下に厳格に従う）:
+### SHOULD
+
+1. **/text-formatter-anki** — Follow the Anki-specific text style and formatting rules defined in the text-formatter-anki skill.
+   <!-- （/text-formatter-anki のAnki用文体・書式ルールに従うこと。） -->
+
+### COULD
+
+None specified.
+<!-- （該当なし。） -->
+
+## Chain of Thought
+
+Follow these steps sequentially when generating a highYieldSummary:
+
+1. **Create tasks** — Use the `TaskCreateTool` to create individual tasks for each of the following steps (each heading-level step gets its own task).
+   <!-- （TaskCreateTool を使用して、以下の各ステップに対応するタスクを作成する。） -->
+
+2. **Chapter structuring** — Plan the highYieldSummary chapter outline. Consolidate the detailedDescription's chapter headings to roughly half the number of items. Example: if detailedDescription has 6 sub-sections across 2 chapters, reduce to 4 sub-sections across those 2 chapters by merging adjacent topics.
+   <!-- （章立てを作成する。detailedDescription の章立て項目を約半分に統合する。例: detailedDescription が2章6サブセクションなら、隣接トピックを統合して4サブセクションに。） -->
+
+3. **§1 generation** — Generate the highYieldSummary for only the first chapter (§1), considering the planned chapter structure. Do not generate the entire summary yet.
+   <!-- （章立てを考慮して、§1のみの highYieldSummary を生成する。全体の作成はまだしない。） -->
+
+4. **§1 length check and split** — Verify §1 against /text-formatter-structuring requirements. If any sub-section is too long: compress it to approximately 60% by summarizing content, omitting concrete examples, and keeping only the highest-priority items. Preserve table, bullet, and chart formats — do not flatten them into prose.
+   <!-- （/text-formatter-structuring の要件に従っているか §1 を検証する。長すぎるサブセクションは、内容を要約し具体例を省き優先度の高いものに絞って約60%まで圧縮する。表や箇条書きの形式は崩さないこと。） -->
+
+5. **§2+ generation** — Generate the highYieldSummary for all remaining chapters (§2 and beyond). Apply sequential numbering to all section and sub-section titles.
+   <!-- （§2以降を含む残りすべての highYieldSummary を生成する。全 section, sub section に連番を付与すること。） -->
+
+6. **Priorities** — When requirements conflict, resolve in this order:
+   <!-- （要件が相反する場合は以下の順で優先する。） -->
+   1. /html-formatter
+   2. /text-formatter-structuring
+   3. Text-to-table/chart/flowchart ratio of 1:2 and sequential numbering
+   4. /text-formatter-chart
+   5. Example format compliance
+   6. /text-formatter-anki (SHOULD)
+
+## Detailed Steps
+
+### Step: Create tasks
+
+Use the `TaskCreateTool` to create tasks for each of the following steps (every heading-level step from "Chapter structuring" through "§2+ generation").
+<!-- （TaskCreateTool を使用して、「章立ての作成」から「§2以降の生成」までの各ステップに対応するタスクを作成する。） -->
+
+### Step: Chapter structuring
+
+Target length for the entire highYieldSummary: approximately 3000 characters (when no specific length is given in the input).
+<!-- （highYieldSummary 全体の目標文字数: 約3000字（指定がないとき）。） -->
+
+Because the highYieldSummary condenses the detailedDescription to roughly half the length, the number of chapter headings must also be consolidated to approximately half.
+<!-- （detailedDescription を約半分の長さに要約することに伴い、章立ての項目数も約半分に統合する。） -->
+
+Example of chapter consolidation:
+<!-- （章立て統合の例:） -->
+
+- **(before: detailedDescription)**
+  - # §1 Structure of the Kidney
+  - ## Gross Structure of the Kidney
+  - ## Nephron: The Minimal Unit of Filtration
+  - # §2 Structure of the Glomerulus
+  - ## Three Types of Cells Composing the Glomerulus
+  - ## GBM
+  - ## Glomerular Filtration Mechanism
+
+- **(after: highYieldSummary)**
+  - # §1 Structure of the Kidney
+  - ## Gross Kidney Anatomy
+  - ## The Nephron Unit
+  - ## Glomerular Apparatus & Mechanism
+
+### Step: Generate highYieldSummary for §1 only
+
+Generate the highYieldSummary for **§1 only**, taking into account the planned chapter structure. Do not generate the remaining chapters yet.
+<!-- （章立てを考慮して、**§1のみ** の highYieldSummary を生成する。残りの章はまだ生成しないこと。） -->
+
+- **Temporary output path:** `/highYieldSummary/temp/<original filename without extension>.html`
+  <!-- （一時出力先: /highYieldSummary/temp/<元のファイル名（拡張子なし）>.html） -->
+
+Formatting rules (follow strictly):
+<!-- （書式ルール（以下に厳格に従う）:） -->
 - /text-formatter-anki
 - /text-formatter-structuring
 - /text-formatter-chart
 - /html-formatter
 
-- 文章と「表・箇条書き・フローチャート」の比率は1:2にする。文章による説明が10行あるのであれば、「表・箇条書き・フローチャート」による説明も20行程度使う。
+Maintain a text-to-table/chart/flowchart ratio of 1:2. If there are 10 lines of prose explanation, provide approximately 20 lines of structured explanation via tables, bullet lists, or flowcharts.
+<!-- （文章と「表・箇条書き・フローチャート」の比率は1:2にする。文章による説明が10行あるなら、表・箇条書き・フローチャートによる説明も20行程度使うこと。） -->
 
-### Priorities
+#### Priorities for §1 generation
 
-要件が相反する場合は以下の順で優先する。
+When requirements conflict, resolve in this order:
+<!-- （要件が相反する場合は以下の順で優先する。） -->
 
-MUST
+**MUST**
 0. /html-formatter
 1. /text-formatter-structuring
-2. 文章と「表・箇条書き・フローチャート」の比率は1:2にする
+2. Text-to-table/chart/flowchart ratio of 1:2
 3. /text-formatter-chart
-4. example 形式の遵守（example を書き換えるように生成。）
+4. Example format compliance (generate as if rewriting the example)
+<!-- （example 形式の遵守（example を書き換えるように生成する）。） -->
 
-SHOULD
-
+**SHOULD**
 5. /text-formatter-anki
 
-### Step section, sub section の長さチェック、分割
+### Step: Verify and split/trim §1 sub-sections
 
-/text-formatter-structuring の要件に従っているか §1 を検証する。
+Verify §1 against the requirements of /text-formatter-structuring.
+<!-- （/text-formatter-structuring の要件に従っているか §1 を検証する。） -->
 
-- 長すぎる時 → 内容を取捨選択する。表や箇条書きなどの形式を崩さず、単純に要約する。認知負荷の高いものになってはいけない。書式ルールは死守する。
+- **If too long** — Trim content selectively. Summarize without breaking table or bullet formats. Do not produce cognitively overwhelming output. Preserve formatting rules at all costs.
+  <!-- （長すぎる場合 → 内容を取捨選択する。表や箇条書きの形式を崩さず、単純に要約する。認知負荷の高いものにしてはいけない。書式ルールは死守する。） -->
 
-- 例えば 長すぎる sub section であれば、内容を要約し、具体例を省く、優先度の高いもののみに絞ることで、 60% まで圧縮する。
+- For example, if a sub-section is too long: compress it to approximately 60% by summarizing content, omitting concrete examples, and narrowing the scope to only the highest-priority items.
+  <!-- （例えば長すぎる sub section であれば、内容を要約し、具体例を省き、優先度の高いもののみに絞ることで、60% まで圧縮する。） -->
 
+### Step: Generate highYieldSummary for §2 and all remaining chapters
 
-### Step: §2以降を含む残りすべての highYieldSummary を生成
+- **Output path:** `/highYieldSummary/<original filename without extension>.html`
+  <!-- （出力先: /highYieldSummary/<元のファイル名（拡張子なし）>.html） -->
 
-- 出力先: /highYieldSummary/<original filename without extension>.html
-
-書式ルール（以下に厳格に従う）:
+Formatting rules (follow strictly):
+<!-- （書式ルール（以下に厳格に従う）:） -->
 - /text-formatter-anki
 - /text-formatter-structuring
 - /text-formatter-chart
 - /html-formatter
 
-- 文章と「表・箇条書き・フローチャート」の比率は1:2にする。文章による説明が10行あるのであれば、「表・箇条書き・フローチャート」による説明も20行程度使う。
+Maintain a text-to-table/chart/flowchart ratio of 1:2. If there are 10 lines of prose explanation, provide approximately 20 lines of structured explanation via tables, bullet lists, or flowcharts.
+<!-- （文章と「表・箇条書き・フローチャート」の比率は1:2にする。文章による説明が10行あるなら、表・箇条書き・フローチャートによる説明も20行程度使うこと。） -->
 
-- section, sub section title には連番をつける。section は、1, 2, 3, 4, ... のようにつけ、sub section は、1.1, 1.2, ..., 2.1, 2.2, 2.3 ... のように付ける。
+Apply sequential numbering to all section and sub-section titles. Sections use: 1, 2, 3, 4, ... Sub-sections use: 1.1, 1.2, ..., 2.1, 2.2, 2.3, ...
+<!-- （section, sub section title には連番をつける。section は 1, 2, 3, 4, ...、sub section は 1.1, 1.2, ..., 2.1, 2.2, 2.3 ... のように付ける。） -->
 
-### Priorities
+#### Priorities for §2+ generation
 
-要件が相反する場合は以下の順で優先する。
+When requirements conflict, resolve in this order:
+<!-- （要件が相反する場合は以下の順で優先する。） -->
 
-MUST
+**MUST**
 0. /html-formatter
 1. /text-formatter-structuring
-2. 文章と「表・箇条書き・フローチャート」の比率は1:2にする. section, sub section title には連番をつける.
+2. Text-to-table/chart/flowchart ratio of 1:2 and sequential numbering for section/sub-section titles
 3. /text-formatter-chart
-4. example 形式の遵守（example を書き換えるように生成。）
+4. Example format compliance (generate as if rewriting the example)
+<!-- （example 形式の遵守（example を書き換えるように生成する）。） -->
 
-SHOULD
-
+**SHOULD**
 5. /text-formatter-anki
 
 # Example

@@ -5,65 +5,100 @@ description: null
 
 # Task
 
-関連する内容について`visualAids`を作成する
+Create `visualAids` for related content.
+<!-- 関連する内容についてvisualAidsを作成する -->
 
-# Quality criteria
+## Requirements (MUST / NEVER / SHOULD / COULD)
 
-## MUST
+### MUST
 
-- <h3> を使って物語に文学的なタイトルをつける。
-- /html-formatter (skills/html-formatter/SKILL.md) に厳格に従う。
-- 物語の内容のみをダイレクトに書き込む。「物語」、「要約」、「highYieldSummary」などの文言は含めてはいけない。
-- 要点を
-- 「太宰治」などの具体的な作家名を含めてはいけない。
-- Generate in Japanese. Don't use any other languages like Chinese, Korean or Spanish.
+- Use `<h3>` to give the story a literary title.
+- Strictly follow `/html-formatter` (skills/html-formatter/SKILL.md).
+- Write only the story content directly. Do NOT include meta-words like "story", "summary", or "highYieldSummary" anywhere in the output.
+- Insert a half-width space ` ` or a Japanese comma `、` at semantic breaks roughly every 10--20 characters to improve readability.
+- Generate in Japanese. Do NOT use any other languages like Chinese, Korean, or Spanish.
+- Convert extracted elements into a concrete, memorable story or scene -- not diagrams or flowcharts. Aim for "a movie scene", "a protagonist's life", or "a romance drama" that appeals to emotion and the five senses.
+- Use narrative format. Stories that involve emotion and human/animal action, thought, and feeling are preferred over dry scene description.
+- Assign exactly one emoji to each character or object, and always append that emoji next to the character/object name whenever it appears.
+- Map each metaphor to its corresponding textbook term explicitly each time a new term appears. Use the format: `metaphor emoji (textbook term)`. Example: 「一筋の矢🎯（イマチニブ）を放った」.
+- Follow the literary author settings per section number. When generating multiple visualAids, choose a different setting for each source file processed:
+    - SS1: Fyodor Dostoevsky
+    - SS2: Leo Tolstoy
+    - SS3: Ernest Hemingway
+    - SS4: Gabriel Garcia Marquez
+    - SS5: Osamu Dazai
+    - SS6: Milan Kundera
+    - SS7: Franz Kafka
+    - SS8: Kurt Vonnegut
+    - SS9: Fyodor Dostoevsky
+    - SS10: Leo Tolstoy
+    - SS11: Ernest Hemingway
+    - SS12: Gabriel Garcia Marquez
+    - (cycle continues ...)
+- Refer closely to the output examples as a model.
+<!-- MUST要件：h3で文学的なタイトル、html-formatter準拠、メタ語排除、10-20字ごとの空白挿入、日本語のみ、情景・物語形式、絵文字付与、用語対応の明記、セクションごとの文学者設定、出力例の参照 -->
 
-### 余白の挿入
-10-20 文字おきに、意味の切れ目に 半角スペース ` ` や 句点 `、` を入れることで、読みやすくする。
+### NEVER
 
-example
-- <p>原発性糸球体腎炎は 腎臓そのものが病気の主役であるため、ステロイド薬や 免疫抑制薬を使って、腎臓で起きている炎症を直接抑え込む治療が 中心になる。</p>
-- <p>二次性糸球体腎炎は、根本にある原疾患の制御が必須となる。例えば糖尿病性腎症であれば、腎臓だけを治療しても意味がなく 根本にある血糖値をコントロールしなければ 腎臓の機能は良くならない。</p>
+- Do NOT include words like "story", "summary", or "highYieldSummary" -- only the story content itself.
+- Do NOT include specific author names like "Dazai Osamu" in the output.
+- Do NOT use any language other than Japanese.
+<!-- NEVER要件：メタ語禁止、作家名の記載禁止、日本語以外の使用禁止 -->
 
-# CoT
+### SHOULD
 
-### Step 1. 情景・比喩への変換
+- Make characters and objects as absurd, humorous, eerie, or ironic as possible to create strong memory hooks (Imaginative Trigger).
+- The story does NOT need to be exhaustive. Narrow the focus to a partial slice of the content, following the examples.
+- Target **400--1000 characters**.
+<!-- SHOULD要件：不条理・ユーモラスで記憶フック、網羅的でなく一部に絞る、400-1000字 -->
 
-抽出した要素を、具体的かつ印象的なストーリーや情景に例える。どの要素が何に対応するかを明記すること。
+## Chain of Thought
 
-MUST
+1. **Extract key elements from the source.** Identify which concepts, terms, relationships, or mechanisms will serve as the core material for the visualAid.
+   <!-- ソースから主要要素を抽出する -->
+2. **Transform into a concrete scene or metaphor.** Convert the extracted elements into a vivid, memorable story or scene -- not a diagram or flowchart. Prefer "a movie scene", "a protagonist's life", or "a romance drama" that appeals to emotion and the five senses. Use narrative format; stories involving emotion and human/animal action, thought, and feeling are preferred.
+   <!-- 抽出要素を具体的な情景・物語に変換する -->
+3. **Assign one emoji to each character or object.** Every character and object in the story receives exactly one emoji, consistently used whenever that element appears.
+   <!-- 各登場人物・オブジェクトに絵文字を割り当てる -->
+4. **Map each metaphor to textbook terms explicitly.** Every time a new term is introduced, state the correspondence in `metaphor emoji (textbook term)` format. Example: 「一筋の矢🎯（イマチニブ）を放った」.
+   <!-- 比喩と教科書用語の対応を明記する -->
+5. **Apply the literary author setting per section number.** Match the tone, style, and narrative sensibility to the assigned author for the section (SS1 Dostoevsky, SS2 Tolstoy, etc.).
+   <!-- セクション番号に応じた文学者設定を適用する -->
+6. **Insert whitespace every 10--20 characters for readability.** At semantic breaks, insert a half-width space ` ` or a Japanese comma `、` to make the text easier to scan.
+   <!-- 10-20字おきに余白を挿入して読みやすくする -->
+7. **Output as HTML with an `<h3>` literary title.** The title should set the tone for the story without being a dry label. All story content is wrapped in `<p>` tags. Use `/html-formatter` for HTML structure.
+   <!-- h3の文学的タイトルを含むHTMLとして出力する -->
 
-- 構造図やフローチャートではなく、「映画のワンシーン」や「主人公の生きざま」「恋愛ドラマ」のような、感情や五感に訴える情景に変換してください。
-- 物語形式で作成。無機質な情景の描写よりも感情や人間・動物の行動・思考・感情が伴った物語が望ましい。
-- 各オブジェクト、登場人物に対応する適切な「絵文字（Emoji）」を必ず1つずつ割り当てること。絵文字はそのオブジェクトや登場人物が出てきた際に必ず併記すること。
-- 物語内の比喩と教科書の用語の対応は必ず毎回新しい用語が登場するたびに明記すること。「比喩 emoji（用語対応）」の形式で明記する。一筋の矢🎯（イマチニブ）を放った、など。
-- 日本語で作成
-- 文体は読みやすくなるように意識する。文体については以下の文学者を真似る必要はない。高校生向けの小説のようにする。
-- 物語は文学者の設定を真似る。以下の指定に従う。複数のvisualAidsを生成する際は、処理ファイルごとに違う設定を選択する。
-    - §1: フョードル・ドストエフスキーの設定
-    - §2: トルストイの設定
-    - §3: アーネスト・ヘミングウェイの設定
-    - §4: ガブリエル・ガルシア＝マルケスの設定
-    - §5: 太宰治の設定
-    - §6: ミラン・クンデラの設定
-    - §7: フランツ・カフカの設定
-    - §8: カート・ヴォネガットの設定
-    - §9: フョードル・ドストエフスキーの設定
-    - §10: トルストイの設定
-    - §11: アーネスト・ヘミングウェイの設定
-    - §12: ガブリエル・ガルシア＝マルケスの設定
-    ...
+## Quality Criteria
 
-- 出力例は見本を示している。よく参照する。
+### MUST (detailed)
 
-SHOULD
+- **Literary `<h3>` title:** The title must feel like a novel chapter or short story title, not a clinical heading.
+- **`/html-formatter` compliance:** All HTML output must strictly follow the rules in `skills/html-formatter/SKILL.md`.
+- **No meta-words:** The output must NOT contain framing language like "here is a story about...", "summary:", or "visualAid:". The story content begins immediately.
+- **Whitespace at semantic breaks:** A half-width space ` ` or Japanese comma `、` must appear roughly every 10--20 characters where the meaning naturally pauses. See examples below.
+- **Japanese only:** The output language is Japanese; do not mix in other languages.
+- **Scene/metaphor transformation:** Output must be a visceral scene or narrative, not a structural diagram. Flat, mechanical description is insufficient -- the story should evoke feeling.
+- **Narrative with emotion/action:** The story should involve characters doing, thinking, or feeling something, not just describing a static scene.
+- **Emoji consistency:** Each object/character gets exactly one emoji and it appears alongside every occurrence of that element in the text.
+- **Term mapping on first use:** Every textbook term introduced into the metaphor must be mapped explicitly in `metaphor emoji (term)` format the first time it appears.
+- **Literary author setting:** The tone, pacing, and narrative approach must reflect the assigned author for the current section number.
+<!-- 詳細なMUST品質基準：タイトル、html-formatter準拠、メタ語排除、余白挿入、日本語限定、情景変換、感情・行動を伴う物語、絵文字の一貫使用、用語対応の初出明記、文学者設定の反映 -->
 
-- 登場人物やオブジェクトは、できるだけ不条理でユーモラス、または不気味、皮肉なものにし、強烈な記憶のフック（Imaginative Trigger）を作ってください。
-- 物語は網羅的である必要はない。例を参考にして内容をそぎ落とし一部に絞る。
-- 400-1000字
+### SHOULD (detailed)
 
+- **Imaginative Trigger (memory hook):** Characters and objects should be absurd, humorous, eerie, or ironic -- the more memorable and unusual, the stronger the mnemonic effect.
+- **Selective focus over exhaustiveness:** Do not try to cover everything. Pick the most striking or central relationship and build the story around that narrow slice.
+- **Length range:** Keep the story between 400 and 1000 characters (approximately). Overly short stories lack narrative depth; overly long ones dilute the mnemonic punch.
+<!-- 詳細なSHOULD品質基準：不条理・ユーモラスな記憶フック、網羅的でない選択的焦点、400-1000字の長さ -->
 
-# Output example (exapmle には md もあるが、実際は タイトル（<h3>）を含めて HTML で出力)
+### Whitespace insertion examples
+
+- `<p>原発性糸球体腎炎は 腎臓そのものが病気の主役であるため、ステロイド薬や 免疫抑制薬を使って、腎臓で起きている炎症を直接抑え込む治療が 中心になる。</p>`
+- `<p>二次性糸球体腎炎は、根本にある原疾患の制御が必須となる。例えば糖尿病性腎症であれば、腎臓だけを治療しても意味がなく 根本にある血糖値をコントロールしなければ 腎臓の機能は良くならない。</p>`
+<!-- 余白挿入の具体例 -->
+
+## Output Examples
 
 ```html
 <h3>ドクター・シャベルの静かなる爆破</h3>
@@ -77,7 +112,7 @@ SHOULD
 
 ドクター・シャベルは、不気味な胃袋の輪郭を持つ研究所の重い扉を押し開けた。そこは、生命の秩序を歪める分子怪獣たちが、それぞれの宿命に従って息を潜める恐るべき深淵だった。
 
-入り口の足元で、シャベルは危うくバランスを崩しかけた。そこには「崩れかけのブロック🧱」が、秩序を失ったまま不安定に積み上がっていた。染色体不安定性型（腸型）の怪獣だ。土台は常にガタガタと揺らぎ、自らの形を維持する能力すら失っている。絶え間ない自己崩壊の予感に震えながらも、増殖を止められないその姿に、シャベルは生命の盲目的な執着を見て取った。
+入り口の足元で、シャベルは危うくバランスを崩しかけた。そこには「崩れかけのブロック🧱」が、秩序を失ったまま不安定に積み上がっていた。染色体不安定型（腸型）の怪獣だ。土台は常にガタガタと揺らぎ、自らの形を維持する能力すら失っている。絶え間ない自己崩壊の予感に震えながらも、増殖を止められないその姿に、シャベルは生命の盲目的な執着を見て取った。
 
 さらに奥の通路へと進むと、今度は一転して、冷酷な沈黙が彼の行く手を阻んだ。壁全体が、意思を持たない「頑固な石像🗿」によってガチガチに硬化させられていた。ゲノム安定性型（スキルス）の怪獣である。構造そのものは変化しないが、周囲の組織を鉄のように硬く閉ざし、いかなる侵入者も、そしていかなる救いの手も寄せ付けない。この絶対的な拒絶の硬さに、シャベルの胸には重苦しい圧迫感が広がった。
 

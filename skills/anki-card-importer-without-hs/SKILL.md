@@ -5,48 +5,102 @@ description: null
 
 # Task
 
-以下のワークフローを順次実行し、高品質な医学Ankiカードを生成する.
-長大な処理だが、時間をかけて省略せずに実行すること.
+Execute the following workflow sequentially to generate high-quality medical Anki cards.
+<!-- （以下のワークフローを順次実行し、高品質な医学Ankiカードを生成する。） -->
+This is a long process; take your time and do not skip any steps.
+<!-- （長大な処理だが、時間をかけて省略せずに実行すること。） -->
 
-## Subagent
+## Requirements
 
-- サブエージェントの使用はこのスキルやこのスキルが参照する他のスキルで明記された場合のみに限る.
-- 使用するサブエージェントはSKILLの指示に忠実に従う.指定がない場合は @haiku を使用する.
-- Subagent には、 @haiku, @haiku-notool, @sonnet, @sonnet-notool がある.このスキルで指定されたサブエージェントを用いる.
-- サブエージェントからの応答がない場合は、errorで異常終了した可能性が高いので、1回まで新たなサブエージェントで再試行する.
-- サブエージェントへのファイルパスの指示はすべて絶対パスで行う.
+### MUST
 
+- Use subagents only where explicitly specified in this skill or in skills referenced by this skill.
+<!-- （サブエージェントの使用はこのスキルやこのスキルが参照する他のスキルで明記された場合のみに限る。） -->
+- Follow each subagent SKILL instruction faithfully. When no agent is specified, use @haiku.
+<!-- （使用するサブエージェントはSKILLの指示に忠実に従う。指定がない場合は @haiku を使用する。） -->
+- Use the exact subagent specified in this skill: @haiku, @haiku-notool, @sonnet, or @sonnet-notool.
+<!-- （このスキルで指定されたサブエージェントを用いる。） -->
+- Use absolute paths for all file path instructions given to subagents.
+<!-- （サブエージェントへのファイルパスの指示はすべて絶対パスで行う。） -->
+- Do NOT read skill files marked as "do not read to conserve context" — delegate them to subagents without reading.
+<!-- （コンテキストを抑えるため〜を見てはいけない」と記載されたスキルファイルは、メインエージェントが読むことなくサブエージェントに委譲する。） -->
+- Verify that all files required by this skill exist before beginning processing.
+<!-- （このSKILLで必要となるファイルの存在を、すべて、処理前に確認する。） -->
+- Do NOT proceed if the working directory or original filename is not provided; ask the user for input.
+<!-- （未提示の場合は処理を進めず、入力を要求する。） -->
 
-## コンテキスト管理
+### NEVER
 
-本ワークフローは長大 (20ステップ以上) であり、コンテキスト溢れのリスクがある.以下を遵守する.
+- Do NOT output full card content, raw JSON data, or a full list of changes. Return only file paths.
+<!-- （禁止事項: カード内容の全量出力、JSONの生データ出力、変更対象の全リスト出力。ファイルに書き込む内容は返答に含めず、ファイルパスのみ記載すること。） -->
+- Do NOT re-read already-generated intermediate JSON/MD files in subsequent steps. Use `uv run python` only for minimal checks (counts, key names).
+<!-- （生成済みの JSON/MD ファイルを後続ステップで再読み込みしない。必要最小限の情報（件数、キー名）のみ `uv run python` で確認する。） -->
 
-1. **サブエージェントスキルファイルを読まない**: 各ステップで「コンテキストを抑えるため〜を見てはいけない」と記載されたスキルファイルは、メインエージェントが読むことなくサブエージェントに委譲する.
-2. **中間ファイルの再読み込み回避**: 生成済みの JSON/MD ファイルを後続ステップで再読み込みしない.必要最小限の情報 (件数、キー名) のみ `uv run python` で確認する.
+### SHOULD
 
-禁止事項: カード内容の全量出力、JSONの生データ出力、変更対象の全リスト出力.ファイルに書き込む内容は返答に含めず、ファイルパスのみ記載すること.
+- If no subagent is specified, default to @haiku.
+<!-- （指定がない場合は @haiku を使用する。） -->
+- For Step D3 (bilingual annotation): if there are more than 10 input HTML files, split across 2 or 3 subagents (all @haiku-notool) because accuracy degrades with more.
+<!-- （1つのサブエージェントへの入力 HTML ファイルが 10個を超えてはいけない。精度が低下するため。10 個以上のファイルがある場合は、2つか3つの sub agent に分けて指示を出す。） -->
 
-## CoT
+### COULD
 
-### Step: Create tasks
+- If a subagent produces no response, it likely terminated abnormally. Retry once with a fresh subagent.
+<!-- （サブエージェントからの応答がない場合は、errorで異常終了した可能性が高いので、1回まで新たなサブエージェントで再試行する。） -->
+
+## Subagent Rules
+
+- Available subagents: @haiku, @haiku-notool, @sonnet, @sonnet-notool. Use the one specified in this skill.
+<!-- （Subagent には、 @haiku, @haiku-notool, @sonnet, @sonnet-notool がある。このスキルで指定されたサブエージェントを用いる。） -->
+- Subagents must follow their SKILL instructions faithfully.
+<!-- （使用するサブエージェントはSKILLの指示に忠実に従う。） -->
+- If a subagent produces no response, it likely terminated abnormally. Retry once with a fresh subagent.
+<!-- （サブエージェントからの応答がない場合は、errorで異常終了した可能性が高いので、1回まで新たなサブエージェントで再試行する。） -->
+- Always use absolute paths when giving file path instructions to subagents.
+<!-- （サブエージェントへのファイルパスの指示はすべて絶対パスで行う。） -->
+
+## Context Management Rules
+
+This workflow is long (20+ steps) and carries a risk of context overflow. Observe the following:
+<!-- （本ワークフローは長大（20ステップ以上）であり、コンテキスト溢れのリスクがある。以下を遵守する。） -->
+
+1. **Do not read subagent skill files**: Skill files marked with "do not read to conserve context" must be delegated to subagents without the main agent reading them.
+<!-- （「コンテキストを抑えるため〜を見てはいけない」と記載されたスキルファイルは、メインエージェントが読むことなくサブエージェントに委譲する。） -->
+2. **Avoid re-reading intermediate files**: Do not re-read already-generated JSON/MD files in subsequent steps. Use `uv run python` only for minimal checks (counts, key names).
+<!-- （生成済みの JSON/MD ファイルを後続ステップで再読み込みしない。必要最小限の情報（件数、キー名）のみ `uv run python` で確認する。） -->
+
+Prohibited: outputting full card content, raw JSON data, or a full list of changes. Do not include file contents in your response; provide file paths only.
+<!-- （禁止事項: カード内容の全量出力、JSONの生データ出力、変更対象の全リスト出力。ファイルに書き込む内容は返答に含めず、ファイルパスのみ記載すること。） -->
+
+## Chain of Thought
+
+### 1. Create tasks
 
 **Use the `TaskCreateTool` to create tasks for each of the following steps. (like ### xxx, #### xxxx, #### xxxx, ...)**
+<!-- （以下の各ステップについて、TaskCreateTool を使ってタスクを作成する。） -->
 
-### Step: 入力の確認
+### 2. Input verification
 
-ユーザーが指定した working directory, original filename をもとに、ファイルの存在を確認する.未提示の場合は処理を進めず、入力を要求する.
+Based on the working directory and original filename specified by the user, verify the file exists.
+<!-- （ユーザーが指定した working directory, original filename をもとに、ファイルの存在を確認する。） -->
+If not provided, do not proceed; ask the user for input.
+<!-- （未提示の場合は処理を進めず、入力を要求する。） -->
 
-このSKILLで必要となるファイルの存在を、すべて、処理前に確認する.
+Verify the existence of all files required by this skill before beginning processing.
+<!-- （このSKILLで必要となるファイルの存在を、すべて、処理前に確認する。） -->
 
-ここで以下を定義する.
+Define the following here:
+<!-- （ここで以下を定義する。） -->
 
-- <original filename (without extension)>: ユーザーの指定したファイル名から拡張子を除いたもの.
-- <absolute path>: ユーザーの指定したWorking directory.指定がない場合はユーザーに必ず質問する.
+- `<original filename (without extension)>`: the user-specified filename with the extension removed.
+<!-- （ユーザーの指定したファイル名から拡張子を除いたもの。） -->
+- `<absolute path>`: the working directory specified by the user. If not specified, ask the user.
+<!-- （ユーザーの指定したWorking directory。指定がない場合はユーザーに必ず質問する。） -->
 
+### 3. D2: detailedDescription cloze addition (subagent)
 
-### Step D2: detailedDescription の cloze 追加 (subagent) 
-
-あなたはコンテキストを削減するため、関連 SKILL を読んではいけない. SubAgent **(@haiku-notool)** に要約せずにそのまま, 以下の指示をする.
+To reduce context, you must NOT read the related SKILL files. Forward the following instructions verbatim (without summarizing) to SubAgent **(@haiku-notool)**:
+<!-- （あなたはコンテキストを削減するため、関連 SKILL を読んではいけない。SubAgent (@haiku-notool) に要約せずにそのまま、以下の指示をする。） -->
 
 `````md
 # Task
@@ -226,12 +280,13 @@ path:
 
 ---
 
-### 以下の step V1, D3 は、sub agent を用いて並列に行う. 
+### 4. V1: visualAids generation (subagent, parallel with D3)
 
+Steps V1 and D3 below are executed in parallel using subagents.
+<!-- （以下の step V1, D3 は、sub agent を用いて並列に行う。） -->
 
-#### Step V1: visualAids を生成 (subagent) 
-
-**あなたはコンテキストを抑えるため `/anki-card-formatter-visualaids` を見てはいけない.** SubAgent(@haiku-notool) に要約せずにそのまま, 以下の指示をする.
+**To conserve context, you must NOT read `/anki-card-formatter-visualaids`.** Forward the following instructions verbatim (without summarizing) to SubAgent (@haiku-notool):
+<!-- （あなたはコンテキストを抑えるため `/anki-card-formatter-visualaids` を見てはいけない。SubAgent(@haiku-notool) に要約せずにそのまま、以下の指示をする。） -->
 
 ```md
 # Task
@@ -286,12 +341,13 @@ path:
 
 ```
 
+### 5. D3: Bilingual annotation (subagent, parallel with V1)
 
-#### Step D3. detailedDescription への2か国語併記
+Forward the following instructions verbatim (without summarizing) to subagent (@haiku-notool), running in the background.
+<!-- （sub agent (@haiku-notool) に以下の指示を、要約せずにそのまま与えて background で実行する。） -->
 
-sub agent (@haiku-notool) に以下の指示を, 要約せずにそのまま与えて back ground で実行する.
-
-1つのサブエージェントへの入力 HTML ファイルが 10個を超えてはいけない. (精度が低下するため.) 10 個以上のファイルがある場合は、2つ か 3つの sub agent に分けて 指示を出す. すべての sub agent は、 @haiku-notool を用いる.
+A single subagent must not receive more than 10 input HTML files (accuracy degrades). If there are 10 or more files, split across 2 or 3 subagents, all using @haiku-notool.
+<!-- （1つのサブエージェントへの入力 HTML ファイルが 10個を超えてはいけない。（精度が低下するため。）10 個以上のファイルがある場合は、2つか3つの sub agent に分けて指示を出す。すべての sub agent は、 @haiku-notool を用いる。） -->
 
 `````md
 
@@ -343,9 +399,10 @@ path:
 
 `````
 
-### Step import: セクション統合・検証・Anki import
+### 6. Import: section merge, validation, Anki import (subagent)
 
-**あなたはコンテキストを抑えるため `anki-card-python-addnotes` を見てはいけない.** SubAgent (@haiku) に以下の指示をする.
+**To conserve context, you must NOT read `anki-card-python-addnotes`.** Forward the following instructions to SubAgent (@haiku):
+<!-- （あなたはコンテキストを抑えるため `anki-card-python-addnotes` を見てはいけない。SubAgent (@haiku) に以下の指示をする。） -->
 
 ```md
 

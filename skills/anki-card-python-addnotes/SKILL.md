@@ -3,19 +3,77 @@ name: anki-card-python-addnotes
 description: JSONからAnkiConnectでAnkiにカードをインポートするスキル。セクション統合・検証・インポートを一括処理。
 ---
 
-## 補足指示: visualAids の割り振り
+## Requirements
 
-highYieldSummary の §N 参照と同じセクション番号に対応する visualAidsHtml を割り振る。
+**MUST**
+- Verify AnkiConnect connectivity before any import attempt (Step 0). A dead connection means every subsequent step is wasted.
+<!-- （AnkiConnectの接続をインポート前に必ず確認すること。接続が切れていると後続の全工程が無駄になる。） -->
+- Determine the correct deck prefix from the existing Anki deck tree (Step 1). Guessing the prefix will route cards to the wrong deck.
+<!-- （既存のAnkiデッキ構成から正しいデッキプレフィックスを特定すること。推測で指定すると誤ったデッキに振り分けられる。） -->
+- Only import notes whose `detailedDescription` field contains cloze markers (`{{cX::...}}`). Notes without cloze markers will cause AnkiConnect errors.
+<!-- （detailedDescriptionフィールドにclozeマーカーが含まれるノートのみをインポート対象とすること。clozeがないノートはAnkiConnectエラーを引き起こす。） -->
+- Validate that every card in the merged JSON has all required fields (`text`, `umeboshiNoteId`, `level`, `oneByOne`), and fill missing fields with defaults before import (Step 6).
+<!-- （結合済みJSONの全カードが必須フィールド（text, umeboshiNoteId, level, oneByOne）を持つことを検証し、欠落があればデフォルト値で補完してからインポートすること。） -->
+- Verify the import result by checking the note count in the target deck (Step 7). A mismatch between expected and actual count means notes failed to land.
+<!-- （インポート後に対象デッキのノート枚数を取得し、結果を検証すること。期待値と実際の枚数が一致しない場合は追加失敗を示す。） -->
 
-- <absolute path>/qaHaiku/<original filename (without extension)>.json から各カードの §N（例: "§2"）を取得
-- その §N に対応する visualAidsHtml/<filename>SectN.html の中身を visualAids フィールドにセットする
-- 例: カードの highYieldSummary が "§2" なら → visualAids には visualAidsHtml/<filename>Sect2.html の内容をセット
+**NEVER**
+- Do not import notes that lack cloze markers in `detailedDescription`. They will produce errors.
+<!-- （detailedDescriptionにclozeマーカーがないノートは絶対にインポートしないこと。エラーが発生する。） -->
+- Do not attempt bulk imports through MCP. Large note counts are unstable over MCP; use the Python script directly instead.
+<!-- （大量ノートのインポートをMCP経由で実行しないこと。ノート数が多いとMCP経由では不安定なため、Pythonスクリプトで直接AnkiConnectを呼び出すこと。） -->
+- Do not skip required-field validation. A missing field silently produces incomplete cards in Anki.
+<!-- （必須フィールドの検証を省略しないこと。フィールド欠落があると不完全なカードがAnkiに登録される。） -->
 
-# 処理手順
+**SHOULD**
+- Use `import_to_anki.py` for batch processing. AnkiConnect becomes unstable with too many notes in a single request.
+<!-- （import_to_anki.pyを用いてバッチ処理すること。1リクエストあたりのノート数が多すぎるとAnkiConnectが不安定になる。） -->
+- Resolve `§N` references in `highYieldSummary` and `visualAids` fields to the corresponding HTML file contents before import.
+<!-- （highYieldSummaryおよびvisualAidsフィールドの§N参照を、対応するHTMLファイルの内容に解決してからインポートすること。） -->
 
-## Step 0: AnkiConnect 接続確認
+**COULD**
+- Use `get_model_field_names.py` to inspect field names when a field-name mismatch is suspected during debugging.
+<!-- （フィールド名の不一致が疑われるデバッグ時には、get_model_field_names.pyでノートタイプのフィールド名を確認してもよい。） -->
+- On import failure, fix the root cause and retry from Step 3.
+<!-- （インポート失敗時は原因を修正し、Step 3から再試行してもよい。） -->
 
-Ankiが起動していなかったり、AnkiConnectが無効だとインポートが全て失敗する。最初に確認することで、後工程の無駄を防ぐ。
+## Chain of Thought
+
+1. **Step 0 -- AnkiConnect connectivity check.** Send a `version` request to `http://127.0.0.1:8765`. If it fails, launch Anki and retry.
+<!-- （Step 0 -- AnkiConnect接続確認。versionリクエストを送信し、失敗時はAnkiを起動して再試行。） -->
+2. **Step 1 -- Determine the deck prefix.** Derive the prefix from the parent directory name of the notes path. Cross-reference with existing deck names via `deckDeckNames`.
+<!-- （Step 1 -- デッキプレフィックスの決定。notesパスの親ディレクトリ名からプレフィックスを導出し、deckDeckNamesで既存デッキと照合する。） -->
+3. **Step 4 -- Check for cloze markers.** Scan each `detailedDescription` file for `{{cX::...}}` patterns. Exclude any note without a cloze marker from the import batch.
+<!-- （Step 4 -- cloze有無チェック。各detailedDescriptionファイルにclozeパターンがあるか走査し、ないノートはインポート対象から除外する。） -->
+4. **Step 5 -- Merge into a single JSON.** Combine `detailedDescription`, `highYieldSummary`, and `visualAids` HTML into one JSON array per the schema. Generate a UUID v7 for each note.
+<!-- （Step 5 -- JSON結合。detailedDescription, highYieldSummary, visualAidsのHTMLをスキーマに従って1つのJSON配列に統合し、各ノートにUUID v7を生成する。） -->
+5. **Step 6 -- Validate required fields.** Confirm every card has `text`, `umeboshiNoteId`, `level`, and `oneByOne`. Fill missing `oneByOne` with `"y"`. Abort if `text` or `umeboshiNoteId` is missing.
+<!-- （Step 6 -- 必須フィールド検証。全カードがtext, umeboshiNoteId, level, oneByOneを持つことを確認。欠落フィールドはデフォルト値で補完し、text/umeboshiNoteId欠落時は中断。） -->
+6. **Step 6 bis -- Import into Anki.** Pass the merged JSON and deck prefix to `import_to_anki.py`. The script groups by `level` into `{deck_prefix}::{level}` sub-decks using the `umeboshiKaname` note type.
+<!-- （Step 6 bis -- Ankiインポート。結合済みJSONとデッキプレフィックスをimport_to_anki.pyに渡す。スクリプトはlevelでグループ化し、umeboshiKanameノートタイプでデッキに投入する。） -->
+7. **Step 7 -- Verify.** Run `findNotes` against the target deck and confirm the note count matches the expected number. Report created / skipped / failed counts.
+<!-- （Step 7 -- 検証。findNotesで対象デッキのノート数を取得し、期待値と一致するか確認する。作成/スキップ/失敗の件数を報告する。） -->
+
+---
+
+## Supplementary Instruction: visualAids Assignment
+
+Assign `visualAidsHtml` content to each card by matching the section number from `highYieldSummary`'s `§N` reference to the corresponding `visualAidsHtml/<filename>SectN.html` file.
+<!-- （highYieldSummaryの§N参照と同じセクション番号に対応するvisualAidsHtml/<filename>SectN.htmlをvisualAidsフィールドに割り振る。） -->
+
+- Retrieve `§N` (e.g. `"§2"`) for each card from `<absolute path>/qaHaiku/<original filename (without extension)>.json`.
+<!-- （各カードの§Nを<absolute path>/qaHaiku/<元ファイル名（拡張子なし）>.jsonから取得する。） -->
+- Set the contents of `visualAidsHtml/<filename>SectN.html` corresponding to that `§N` into the `visualAids` field.
+<!-- （その§Nに対応するvisualAidsHtml/<filename>SectN.htmlの中身をvisualAidsフィールドにセットする。） -->
+- Example: if a card's `highYieldSummary` references `"§2"`, set the contents of `visualAidsHtml/<filename>Sect2.html` into its `visualAids` field.
+<!-- （例：カードのhighYieldSummaryが"§2"なら、visualAidsHtml/<filename>Sect2.htmlの内容をvisualAidsにセットする。） -->
+
+# Processing Steps
+
+## Step 0: AnkiConnect Connectivity Check
+
+If Anki is not running or AnkiConnect is disabled, every import will fail. Checking first prevents wasted effort in later steps.
+<!-- （Ankiが起動していない、またはAnkiConnectが無効の場合、全インポートが失敗する。最初に確認することで後工程の無駄を防ぐ。） -->
 
 ```bash
 python -c "
@@ -35,63 +93,71 @@ except Exception as e:
 "
 ```
 
-### フォールバック(Ankiを起動)
+### Fallback (Launch Anki)
 
-Launch anki
+If the connectivity check fails, launch Anki and retry.
+<!-- （接続確認に失敗した場合、Ankiを起動して再試行する。） -->
 
     ```bash
     "/c/Users/chiba/AppData/Local/Programs/Anki/anki.exe" &
     ```
 
-## Step 1: デッキプレフィックスの決定
+## Step 1: Determine the Deck Prefix
 
-入力パス4（notes/）の親ディレクトリ名からデッキプレフィックスを導出する。
-Ankiの既存デッキ構成から正しいプレフィックスを特定する。
+Derive the deck prefix from the parent directory name of the notes input path (path4). Identify the correct prefix by cross-referencing with Anki's existing deck structure.
+<!-- （入力パス4（notes/）の親ディレクトリ名からデッキプレフィックスを導出する。Ankiの既存デッキ構成と照合して正しいプレフィックスを特定する。） -->
 
 ```python
-# path4 の例: "C:\Users\chiba\StudySpace\Pathology\ProblemPool_Eitaro\notes"
+# path4 example: "C:\Users\chiba\StudySpace\Pathology\ProblemPool_Eitaro\notes"
 output_dir = Path(path4)
 run_name = output_dir.parent.name  # "ProblemPool_Eitaro"
 
-# 既存デッキ構成を確認してプレフィックスを決定
-# 例: 既存に "Active::Public health::06" があれば、次の番号で "Active::Public health::07"
-# 確認方法: anki_connect('deckDeckNames') で既存デッキ一覧を取得
+# Check existing deck structure to determine the prefix
+# Example: if "Active::Public health::06" exists, use the next number: "Active::Public health::07"
+# How to check: anki_connect('deckDeckNames') returns the list of existing deck names
 deck_names = anki_connect('deckDeckNames')['result']
-# run_name に対応するプレフィックスを特定（手動 or パターンマッチ）
-deck_prefix = "<特定したプレフィックス>"  # 例: "Active::Public health::07"
+# Identify the prefix corresponding to run_name (manually or via pattern matching)
+deck_prefix = "<identified prefix>"  # e.g. "Active::Public health::07"
 ```
 
-## Step 4: detailedDescription の cloze 有無チェック
+## Step 4: Cloze Presence Check in detailedDescription
 
-detailedDescription に cloze ({{cx::xxx}}) が含まれているもののみをインポート対象にする。cloze がないファイルはインポート対象から外す。
+Only import notes whose `detailedDescription` contains cloze markers (`{{cX::xxx}}`). Exclude files without cloze markers from the import batch.
+<!-- （detailedDescriptionにcloze（{{cX::xxx}}）が含まれているノートのみをインポート対象にする。clozeがないファイルはインポート対象から外す。） -->
 
-cloze がないノートをインポートするとエラーになる。
+Importing a note without cloze markers will cause an error.
+<!-- （clozeがないノートをインポートするとエラーになる。） -->
 
-## Step 5: JSON結合
+## Step 5: JSON Merge
 
-import 前の最終ファイルを、JSONにまとめる。
+Consolidate everything into a single JSON file before import.
+<!-- （インポート前の最終ファイルを1つのJSONにまとめる。） -->
 
-出力先: <absolute path>/notes/<original filename without extension>.json
+Output path: `<absolute path>/notes/<original filename without extension>.json`
+<!-- （出力先: <absolute path>/notes/<元ファイル名（拡張子なし）>.json） -->
 
-JSONスキーマ
+JSON schema:
+<!-- （JSONスキーマ） -->
 
 ```json
 [
   {
-    "text": "<h2>1.2 xxx</h2>...",      // detailedDescription の HTML.
-    "highYieldSummary": "<h1>1 xxx</h1>...",    // highYieldSummary の HTML. detailedDescription に対応する highYieldSummary を、mapping から取得する.
-    "visualAids": "<h1>1</h1>...",              // visualAids の HTML. highYieldSummary の section index と visualAids section index は一致している.
-    "umeboshiNoteId": "eitaro-...-sect1",       // UUID v7 の、各ノートに固有の一意のID
-    "level": "easy",                   // サブデッキ分類用. import_to_anki.py が ::{level} サブデッキに分類. 指定がない場合, easy.
-    "oneByOne": "y"                      // デフォルト "y"
+    "text": "<h2>1.2 xxx</h2>...",      // detailedDescription HTML.
+    "highYieldSummary": "<h1>1 xxx</h1>...",    // highYieldSummary HTML. Map the corresponding highYieldSummary to detailedDescription using the mapping.
+    "visualAids": "<h1>1</h1>...",              // visualAids HTML. The highYieldSummary section index and visualAids section index are aligned.
+    "umeboshiNoteId": "eitaro-...-sect1",       // UUID v7, unique per note.
+    "level": "easy",                   // For sub-deck classification. import_to_anki.py routes to ::{level} sub-deck. Defaults to easy if unspecified.
+    "oneByOne": "y"                      // Default "y"
   },
   ...
 ]
 ```
 
-highYieldSummary, visualAids は、mapping をもとに対応ファイルを割り当てる。highYieldSummary, visualAids の index は対応している。（highYieldSummary から visualAids を作ったため。）
+Assign the corresponding `highYieldSummary` and `visualAids` files using the mapping. The indices of `highYieldSummary` and `visualAids` are aligned (since `visualAids` was generated from `highYieldSummary`).
+<!-- （highYieldSummary, visualAidsはmappingをもとに対応ファイルを割り当てる。highYieldSummary, visualAidsのindexは対応している（highYieldSummaryからvisualAidsを作成したため）。） -->
 
-umeboshiNoteId は 各 note ごと（detailedDescription ごと）に、python で生成する。
+Generate `umeboshiNoteId` in Python, one per note (one per `detailedDescription`).
+<!-- （umeboshiNoteIdは各ノートごと（detailedDescriptionごと）にPythonで生成する。） -->
 
 ```python
 import json, sys, uuid, time, random
@@ -166,15 +232,18 @@ with open(output, 'w', encoding='utf-8') as f:
 print(f'Written to: {output}')
 ```
 
-## Step 6: 必須フィールドの検証
+## Step 6: Required Field Validation
 
-結合された JSON に 必須フィールド が含まれているか確認。ここでエラーがあった場合には、次のステップでインポートが正常に行われないため、必ずデフォルト値で補完する。
+Check that every card in the merged JSON contains all required fields. If any are missing, fill them with default values before proceeding -- otherwise the next step will fail to import correctly.
+<!-- （結合されたJSONに必須フィールドが含まれているか確認する。欠落がある場合、次のステップでインポートが正常に行われないため、必ずデフォルト値で補完する。） -->
 
-必須フィールド
-- text
-- umeboshiNoteId
-- level
-- oneByOne: default --> "y"
+Required fields:
+<!-- （必須フィールド） -->
+- `text`
+- `umeboshiNoteId`
+- `level`
+- `oneByOne`: default `"y"`
+<!-- （oneByOne: デフォルト"y"） -->
 
 
 ```bash
@@ -193,26 +262,33 @@ print(f'Validation passed: {len(merged)} cards')
 ```
 
 
-### Step 6: Ankiインポート
+### Step 6: Anki Import
 
-結合済み JSON を `import_to_anki.py` に渡す。
+Pass the merged JSON to `import_to_anki.py`.
+<!-- （結合済みJSONをimport_to_anki.pyに渡す。） -->
 
-スクリプトの動作
+Script behavior:
+<!-- （スクリプトの動作） -->
 
-- 内部で `level` フィールドによりグループ化し、デッキ `{deck_prefix}::{level}` にインポート.
-- ノートタイプは umeboshiKaname 固定.
-- 重複ノートは allowDuplicate: True でスキップ
+- Groups cards internally by the `level` field and imports them into deck `{deck_prefix}::{level}`.
+<!-- （内部でlevelフィールドによりグループ化し、デッキ{deck_prefix}::{level}にインポート。） -->
+- Uses the note type `umeboshiKaname` exclusively.
+<!-- （ノートタイプはumeboshiKaname固定。） -->
+- Duplicate notes are skipped with `allowDuplicate: True`.
+<!-- （重複ノートはallowDuplicate: Trueでスキップ。） -->
 
 ```bash
 python "C:/Users/chiba/.claude/skills/anki-card-python-addnotes/scripts/import_to_anki.py" "{merged_json_path}" "{deck_prefix}"
 ```
 
-- `{merged_path}`: <absolute path>/notes/<original filename without extension>.json
-- `{deck_prefix}`: インポート先デッキ名（ユーザー指定）
+- `{merged_path}`: `<absolute path>/notes/<original filename without extension>.json`
+- `{deck_prefix}`: target deck name for import (user-specified)
+<!-- （{deck_prefix}: インポート先デッキ名（ユーザー指定）） -->
 
-### Step 7: 検証
+### Step 7: Verification
 
-note id が適切な個数返却されるか確認。note id が適切な数返却されない場合、追加に失敗している. ノート重複エラーが出る時、実際にはノートが存在していない場合が多い。ノート枚数を取得して検証する。
+Confirm that the correct number of note IDs is returned. If the expected number of note IDs is not returned, some notes failed to add. When a duplicate-note error appears, the note often does not actually exist. Retrieve the note count to verify.
+<!-- （ノートIDが適切な個数返却されるか確認する。適切な数が返却されない場合、追加に失敗している。ノート重複エラーが出るとき、実際にはノートが存在していない場合が多い。ノート枚数を取得して検証する。） -->
 
 ```bash
 cd "<absolute path>" && python -c "
@@ -228,30 +304,46 @@ print(f'Notes in deck: {len(result[\"result\"])}')
 "
 ```
 
-### 結果報告
+### Results Reporting
 
-import_to_anki.py の出力をそのまま結果として返す:
-- `created`: 新規作成件数
-- `skipped`: 重複スキップ件数
-- `failed`: 失敗件数
+Return the output of `import_to_anki.py` directly as the result:
+<!-- （import_to_anki.pyの出力をそのまま結果として返す） -->
+- `created`: number of newly created notes
+<!-- （created: 新規作成件数） -->
+- `skipped`: number of duplicates skipped
+<!-- （skipped: 重複スキップ件数） -->
+- `failed`: number of failures
+<!-- （failed: 失敗件数） -->
 
-### 失敗時の対応
+### Handling Failures
 
-`failed > 0` の場合:
-1. AnkiConnect の応答エラー → Anki が起動しているか確認
-2. フィールド名の不一致 → `get_model_field_names.py` でノートタイプのフィールド名を確認
-3. 重複ノート → 既存ノートの場合は `skipped` として正常（エラーではない）
-4. 上記を修正後、Step 3 から再試行
+If `failed > 0`:
+<!-- （failed > 0の場合） -->
+1. AnkiConnect response error -- check that Anki is running.
+<!-- （AnkiConnectの応答エラー → Ankiが起動しているか確認） -->
+2. Field name mismatch -- use `get_model_field_names.py` to inspect the note type's field names.
+<!-- （フィールド名の不一致 → get_model_field_names.pyでノートタイプのフィールド名を確認） -->
+3. Duplicate notes -- existing notes are counted as `skipped`, which is normal (not an error).
+<!-- （重複ノート → 既存ノートの場合はskippedとして正常（エラーではない）） -->
+4. After fixing the issue above, retry from Step 3.
+<!-- （上記を修正後、Step 3から再試行） -->
 
-## 重要なポイント
+## Important Notes
 
-- **AnkiConnect の制限**: 大量ノートの同時インポートは不安定なため、`import_to_anki.py` でバッチ処理（<original filename without extension>0件ずつ）
-- **MCP 不使用の理由**: ノート数が多いため、MCP 経由ではなく Python スクリプトで直接 AnkiConnect を呼び出し
-- **§N 参照**: highYieldSummary・visualAids フィールドに `§N` 形式の参照がある場合、対応する HTML ファイルの内容に解決
-- **レベル分類**: カードの `level` フィールド（veryEasy/easy/normal/...）により自動的にサブデッキに分類される
+- **AnkiConnect limits**: Bulk import of many notes at once is unstable, so `import_to_anki.py` processes them in batches (<original filename without extension>0 notes at a time).
+<!-- （AnkiConnectの制限: 大量ノートの同時インポートは不安定なため、import_to_anki.pyでバッチ処理する。） -->
+- **Reason for not using MCP**: Due to the large number of notes, the Python script calls AnkiConnect directly rather than routing through MCP.
+<!-- （MCP不使用の理由: ノート数が多いため、MCP経由ではなくPythonスクリプトで直接AnkiConnectを呼び出す。） -->
+- **§N references**: When the `highYieldSummary` / `visualAids` fields contain `§N`-format references, resolve them to the contents of the corresponding HTML files.
+<!-- （§N参照: highYieldSummary・visualAidsフィールドに§N形式の参照がある場合、対応するHTMLファイルの内容に解決する。） -->
+- **Level classification**: Cards are automatically sorted into sub-decks based on the `level` field (`veryEasy` / `easy` / `normal` / ...).
+<!-- （レベル分類: カードのlevelフィールド（veryEasy/easy/normal/...）により自動的にサブデッキに分類される。） -->
 
-## 使用スクリプト
+## Scripts Used
 
-- `scripts/merge_sections.py` - §N 参照解決（highYieldSummary / visualAids 共用）
-- `scripts/import_to_anki.py` - AnkiConnect による一括インポート
-- `scripts/get_model_field_names.py` - ノートタイプのフィールド名取得（デバッグ用）
+- `scripts/merge_sections.py` -- §N reference resolution (shared by highYieldSummary / visualAids)
+<!-- （scripts/merge_sections.py -- §N参照解決。highYieldSummary / visualAids共用。） -->
+- `scripts/import_to_anki.py` -- Bulk import via AnkiConnect
+<!-- （scripts/import_to_anki.py -- AnkiConnectによる一括インポート。） -->
+- `scripts/get_model_field_names.py` -- Retrieve note type field names (for debugging)
+<!-- （scripts/get_model_field_names.py -- ノートタイプのフィールド名取得。デバッグ用。） -->
