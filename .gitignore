@@ -71,5 +71,6 @@ tmp/
 .wrangler/
 .dev.vars
 
-# Internal (marketing drafts, not part of the software)
+# Internal (marketing drafts, project management — not part of the software)
 docs/marketing/
+plans/
