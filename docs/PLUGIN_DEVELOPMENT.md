@@ -31,7 +31,7 @@ mkdir -p plugins/transcribe/my-whisper
 
 ### Step 2: SKILL.md を書く
 
-```markdown
+`````markdown
 ---
 name: transcribe-my-whisper
 description: My custom Whisper backend using local whisper.cpp
@@ -71,7 +71,7 @@ whisper <input_file> --model ~/whisper-models/ggml-large-v3.bin \
 ## Cost
 
 無料（ローカル実行のため）。処理時間はファイル長に比例（例: 90分の講義 → 約5分）。
-```
+`````
 
 ### Step 3: レジストリを更新
 
