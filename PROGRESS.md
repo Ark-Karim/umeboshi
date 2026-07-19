@@ -123,6 +123,23 @@
 
 ## Phase C: 公開 (RELEASE.md)
 
-- **Status**: Pending — Phase A-5 完了後
-- **Prerequisites**: Phase A 自己検証, secret scan, author Ark-Karim
-- **Note**: GOAL.md エスカレーション条件4は RELEASE.md により解除済み
+- **Status**: Done
+- **Completed**: 2026-07-19
+- **Summary**:
+  - GitHub リポジトリ作成: `Ark-Karim/umeboshi` (public)
+  - Author 統一: Ark-Karim <ark-karim@proton.me>
+  - Secret scan: クリーン (プレースホルダのみ)
+  - GOAL.md エスカレーション条件4: RELEASE.md により解除、自律実行完了
+
+## Phase D: 身内テスト (RELEASE.md)
+
+- **Status**: Pending — 友人による実使用待ち
+- **Action**: 友人にリポジトリを共有し、フィードバック収集
+
+## Phase E: マーケティング素材 (RELEASE.md)
+
+- **Status**: Not Started
+
+## Phase F: コスト可視化 (RELEASE.md)
+
+- **Status**: Not Started

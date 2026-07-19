@@ -70,3 +70,6 @@ tmp/
 # ============================================
 .wrangler/
 .dev.vars
+
+# Internal (marketing drafts, not part of the software)
+docs/marketing/
