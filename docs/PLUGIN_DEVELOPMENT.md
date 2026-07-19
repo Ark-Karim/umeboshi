@@ -1,4 +1,6 @@
 # How to Make a Plugin
+> [日本語版](PLUGIN_DEVELOPMENT.ja.md) | English version
+
 # プラグインの作り方
 
 > **English** (primary) | **日本語** (for Japanese-speaking friends)

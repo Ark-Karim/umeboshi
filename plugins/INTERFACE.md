@@ -1,4 +1,6 @@
-# Plugin Interfaces / プラグインインターフェース — Umeboshi
+# Plugin Interfaces — Umeboshi
+> [日本語版](INTERFACE.ja.md) | English version
+
 
 Each backend type defines a contract. A plugin is a directory under `plugins/<type>/<name>/`
 containing at minimum a `SKILL.md`. Plugins are Claude Code skills that follow the interface

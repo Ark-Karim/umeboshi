@@ -1,4 +1,6 @@
 # Contributing to Umeboshi
+> [日本語版](CONTRIBUTING.ja.md) | English version
+
 
 Umeboshi is an AI-powered Anki card generator built on Claude Code's skill system.
 Contributions are welcome — whether you're fixing a typo, adding a new transcription

@@ -1,4 +1,6 @@
-# Umeboshi Setup Guide / セットアップガイド
+# Umeboshi Setup Guide
+> [日本語版](SETUP.ja.md) | English version
+
 
 > English (primary) — 日本語サマリは各セクションに併記
 

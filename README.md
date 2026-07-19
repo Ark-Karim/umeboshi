@@ -1,4 +1,6 @@
 # Umeboshi — AI-Powered Anki Card Generator for Medical Students
+> [日本語版](README.ja.md) | English version
+
 
 Turn lecture slides and textbooks into high-quality Anki flashcards with bilingual
 annotations, visual aids, and cloze deletions — in 2 commands.
