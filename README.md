@@ -5,7 +5,7 @@ annotations, visual aids, and cloze deletions — in 2 commands.
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/umeboshi/umeboshi.git && cd umeboshi
+git clone https://github.com/Ark-Karim/umeboshi.git && cd umeboshi
 ./install.sh
 
 # 2. Launch Claude Code
@@ -31,10 +31,7 @@ for subscription details and current limits.
    Copy `notetype/Umeboshi-Kaname/Front.html`, `Back.html`, and `Styling.css`.
    See [docs/SETUP.md](docs/SETUP.md) for screenshots.
 
-2. **(Optional) Deploy ClaudeFlare** — Cloud sync for LLM Q&A across devices.
-   ```bash
-   cd claudeflare && npm install && npx wrangler deploy
-   ```
+2. **(Optional) Enable cloud sync** — See `plugins/sync/claudeflare/SKILL.md` for Cloudflare-based LLM Q&A sync. Disabled by default.
 
 ## What This Does
 
@@ -55,12 +52,45 @@ for subscription details and current limits.
 
 ### Using DeepSeek (no Claude subscription)
 
+[DeepSeek's Anthropic-compatible API](https://api-docs.deepseek.com/quick_start/agent_integrations/claude_code/)
+lets you use Claude Code without an Anthropic subscription.
+
 ```bash
-export DEEPSEEK_API_KEY="sk-..."   # DeepSeek Platform → API Keys
-claude
-#    Inside Claude Code: /anki-card-generator-without-hs
-#    The orchestrator auto-detects available backends
+# Linux/macOS
+export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+export ANTHROPIC_AUTH_TOKEN="<your DeepSeek API Key>"
+export ANTHROPIC_MODEL=deepseek-v4-pro[1m]
+export ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro[1m]
+export ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4-pro[1m]
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash
+export CLAUDE_CODE_SUBAGENT_MODEL=deepseek-v4-flash
+
+# Windows PowerShell
+$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+$env:ANTHROPIC_AUTH_TOKEN="<your DeepSeek API Key>"
+$env:ANTHROPIC_MODEL="deepseek-v4-pro[1m]"
+$env:ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro[1m]"
+$env:ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro[1m]"
+$env:ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
+$env:CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
 ```
+
+Get your API key from [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys).
+
+### Using OpenRouter (alternative provider)
+
+[OpenRouter](https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration)
+provides multi-provider failover and budget controls.
+
+```bash
+export ANTHROPIC_BASE_URL=https://openrouter.ai/api/v1
+export ANTHROPIC_AUTH_TOKEN="<your OpenRouter API Key>"
+# Optional: /fast mode
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=anthropic/claude-haiku-4-5
+export CLAUDE_CODE_SUBAGENT_MODEL=anthropic/claude-haiku-4-5
+```
+
+Get your key from [openrouter.ai/keys](https://openrouter.ai/keys).
 
 ### Using external transcription (Japanese / non-English)
 

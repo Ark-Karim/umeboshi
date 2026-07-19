@@ -1,4 +1,4 @@
-# Plugin Interfaces — Umeboshi
+# Plugin Interfaces / プラグインインターフェース — Umeboshi
 
 Each backend type defines a contract. A plugin is a directory under `plugins/<type>/<name>/`
 containing at minimum a `SKILL.md`. Plugins are Claude Code skills that follow the interface
@@ -6,7 +6,7 @@ below — the orchestrator discovers them via `plugins/registry.json`.
 
 ---
 
-## 1. Transcribe Backend (`plugins/transcribe/<name>/SKILL.md`)
+## 1. Transcribe Backend / 文字起こしバックエンド (`plugins/transcribe/<name>/SKILL.md`)
 
 **Purpose**: Convert an audio or video file into a plain text transcript.
 
@@ -24,7 +24,7 @@ below — the orchestrator discovers them via `plugins/registry.json`.
 
 ---
 
-## 2. Generate Backend (`plugins/generate/<name>/SKILL.md`)
+## 2. Generate Backend / 生成バックエンド (`plugins/generate/<name>/SKILL.md`)
 
 **Purpose**: Turn structured text (transcript, textbook excerpt) into Anki-ready HTML cards.
 
@@ -43,7 +43,7 @@ below — the orchestrator discovers them via `plugins/registry.json`.
 
 ---
 
-## 3. Import Backend (`plugins/import/<name>/SKILL.md`)
+## 3. Import Backend / インポートバックエンド (`plugins/import/<name>/SKILL.md`)
 
 **Purpose**: Take card JSON and push it into Anki (or export as .apkg).
 
@@ -62,7 +62,7 @@ below — the orchestrator discovers them via `plugins/registry.json`.
 
 ---
 
-## 4. Notetype (`plugins/notetype/<name>/`)
+## 4. Notetype / ノートタイプ (`plugins/notetype/<name>/`)
 
 **Purpose**: Anki card rendering template — defines how card data appears in Anki.
 
@@ -78,7 +78,23 @@ Anki via Tools → Manage Note Types → Add, not invoked at runtime by Claude C
 
 ---
 
-## Adding a New Plugin
+## 5. Sync Backend / 同期バックエンド (`plugins/sync/<name>/SKILL.md`)
+
+**Purpose**: Optional cloud sync for LLM Q&A settings and API keys across devices.
+
+| Contract | Detail |
+|----------|--------|
+| **Input** | None (deployed as a Cloudflare Worker or similar) |
+| **Output** | LLM chat API endpoint accessible from Anki cards |
+| **Default** | `"none"` — sync is disabled, all data stays local |
+
+**Sync plugins** provide a backend for the notetype's built-in LLM chat feature.
+They are entirely optional — card generation and review work without them.
+
+---
+
+
+## Adding a New Plugin / 新しいプラグインの追加
 
 1. Create `plugins/<type>/<name>/SKILL.md` implementing the interface above
 2. Update `plugins/registry.json` → `backends.<type>.active` to `"<name>"`

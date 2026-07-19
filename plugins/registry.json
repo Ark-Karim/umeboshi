@@ -17,6 +17,10 @@
     "notetype": {
       "active": "umeboshi-kaname",
       "description": "Card rendering template (Front/Back/Styling). Default: Umeboshi-Kaname."
+    },
+    "sync": {
+      "active": "none",
+      "description": "Optional cloud sync for LLM Q&A across devices. Set to \"claudeflare\" to enable. Default: disabled (all data stays local)."
     }
   }
 }

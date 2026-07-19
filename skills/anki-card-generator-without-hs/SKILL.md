@@ -46,7 +46,7 @@ Use the `TaskCreateTool` to create tasks for each of the following steps. (like 
 | import | `<active>` | `plugins/import/<active>/SKILL.md` |
 
 文字起こしが必要な場合、アクティブな transcribe プラグインの SKILL.md を読み、その指示に従う。
-デフォルト: `transcribe-fireworks-whisper` → `skills/transcribe-fireworks-whisper/SKILL.md` に委譲。
+デフォルト: `local-whisper` → `plugins/transcribe/local-whisper/SKILL.md` に従う。
 
 ### Step: 入力の確認
 
